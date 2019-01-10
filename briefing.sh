@@ -18,5 +18,5 @@ find ~/podcasts -name '*.mp3' -exec mv {} ~/briefing/$today \;
 
 # This does not seem to work with ~/ for $HOME, so I've put the full user
 # path here.
-playlist='/home/user/briefing/play.m3u' ; if [ -f $playlist ]; then rm $playlist ; fi ; for f in /home/steven/briefing/$today/*.mp3; do echo "$f" >> "$playlist"; done
+playlist='/home/user/briefing/play.m3u' ; if [ -f $playlist ]; then rm $playlist ; fi ; for f in /home/user/briefing/$today/*.mp3; do echo "$f" >> "$playlist"; done
 mplayer -playlist "$playlist"
