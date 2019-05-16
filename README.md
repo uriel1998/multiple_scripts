@@ -24,8 +24,8 @@ A small note - processes from bash, python, and java (at present) are
 not *excluded*, but the command they're *running* is what is counted. So 
 for example, these three commands:
 
-`/usr/bin/python /usr/share/kupfer/kupfer.py --no-splash`
-`/usr/bin/python /usr/bin/autokey-gtk`
-`/usr/bin/python /usr/bin/dstat -c -C 0,1,total -d -s -n -y -r`
+`/usr/bin/python /usr/share/kupfer/kupfer.py --no-splash`  
+`/usr/bin/python /usr/bin/autokey-gtk`  
+`/usr/bin/python /usr/bin/dstat -c -C 0,1,total -d -s -n -y -r`  
 
 are *not* lumped together, but are treated as separate commands.
