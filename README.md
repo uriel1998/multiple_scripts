@@ -1,6 +1,11 @@
 # multiple_scripts
 Multiple scripts that are useful but don't deserve their own repository.  
 
+## ytube.sh
+
+A wrapper for youtube-dl to make easier (and automate) some things.
+
+
 ## briefing.sh  
 
 Used along with Podfox to create a daily briefing without involving 

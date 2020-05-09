@@ -1,0 +1,104 @@
+#!/bin/bash
+
+ACTION=""
+GUI=""
+
+##############################################################################
+# Show help on cli
+##############################################################################
+
+display_help() {
+	echo "usage: thuit.sh [-h][-n][-e][-b][-x][-c]"
+	echo " "
+	echo "optional arguments:"
+	echo "   -h     show this help message and exit"
+    echo "   -u     Video URL"
+    echo "   -c     Get URL from clipboard"    
+    echo "   -v     Download video"
+    echo "   -a     Download audio"
+    echo "   -p     Play video natively"    
+    echo "   -g     GUI feedback"
+    exit
+}
+
+#TODO - make listen option as well
+#TODO - if error, try updating youtube-dl first, lol
+
+while [ $# -gt 0 ]; do
+option="$1"
+    case $option
+    in
+    http*)
+        URL="$1"
+        shift
+        ;;
+    -h) display_help
+        shift 
+        ;;        
+    -c) 
+        URL=$(xclip -o)
+        shift 
+        ;;        
+    -u) shift
+        URL="$1"
+        shift 
+        ;;        
+    -g) GUI=TRUE
+        shift
+        ;;
+    -v) #download video=1
+        ACTION="VIDEO"
+        shift
+        ;;
+    -a) #download audio
+        ACTION="AUDIO"
+        shift 
+        ;;        
+    -p) #play video
+        ACTION="PLAY"
+        shift 
+        ;;                
+    esac
+done
+
+#TODO - ADD IN DOWNLOAD PLAYLIST OPTION
+#TODO - re-implement batch file list input
+#TODO - MAKE SO TUI is default
+if [[ "$URL" = "" ]];then
+    URL=$(zenity --timeout 30 --entry --text "What is the YouTube URL?" --entry-text "")
+    if [[ "$URL" = "" ]];then
+        display_help
+    fi
+fi
+
+#TODO - MAKE SO TUI is default    
+if [[ "$ACTION" = "" ]];then
+    ACTION=$(zenity --timeout 30 --list --column "Pick" --column "Opinion"  --text "Which action?" --radiolist TRUE "VIDEO" FALSE "AUDIO" FALSE "BOTH" FALSE "PLAY");
+    if [[ "$ACTION" = "" ]];then
+        display_help
+    fi
+fi
+    
+
+case "$ACTION" in
+    VIDEO)
+        if [ ! -z "$GUI" ];then
+            ionice -c 3 youtube-dl "$URL" --netrc --ignore-errors --cookies /home/steven/vault/cookies.txt --write-thumbnail --mark-watched --continue  --write-description --no-playlist --no-overwrites --restrict-filenames --no-check-certificate -o '/home/steven/downloads/videos/%(title)s-%(autonumber)s.%(ext)s'  | tee >(zenity --progress --pulsate --auto-close --auto-kill)  
+        else
+            ionice -c 3 youtube-dl "$URL" --netrc --ignore-errors --cookies /home/steven/vault/cookies.txt --write-thumbnail --mark-watched --continue  --write-description --no-playlist --no-overwrites --restrict-filenames --no-check-certificate -o '/home/steven/downloads/videos/%(title)s-%(autonumber)s.%(ext)s' 
+        fi
+        ;;
+    
+    AUDIO)
+        if [ ! -z "$GUI" ];then
+            ionice -c 3 youtube-dl "$URL" -x --netrc --ignore-errors --write-description --cookies /home/steven/vault/cookies.txt --no-check-certificate --embed-thumbnail --prefer-ffmpeg --no-playlist --mark-watched --continue --audio-format mp3 -o '/home/steven/downloads/mp3/%(title)s:%(uploader)s:%(upload_date)s.%(ext)s' --rate-limit 1M --restrict-filenames  | tee >(zenity --progress --pulsate --auto-close --auto-kill)
+        else
+            ionice -c 3 youtube-dl "$URL" -x --netrc --ignore-errors --write-description --cookies /home/steven/vault/cookies.txt --no-check-certificate --embed-thumbnail --prefer-ffmpeg --no-playlist --mark-watched --continue --audio-format mp3 -o '/home/steven/downloads/mp3/%(title)s:%(uploader)s:%(upload_date)s.%(ext)s' --rate-limit 1M --restrict-filenames  
+        fi
+        ;;
+    
+    PLAY) 
+        mpv "$szAnswer"
+        ;;
+esac
+
