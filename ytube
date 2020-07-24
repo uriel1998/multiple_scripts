@@ -8,7 +8,7 @@ GUI=""
 ##############################################################################
 
 display_help() {
-	echo "usage: thuit.sh [-h][-n][-e][-b][-x][-c]"
+	echo "usage: ytube.sh [-h][-n][-e][-b][-x][-c]"
 	echo " "
 	echo "optional arguments:"
 	echo "   -h     show this help message and exit"

@@ -5,6 +5,21 @@ Multiple scripts that are useful but don't deserve their own repository.
 
 A wrapper for youtube-dl to make easier (and automate) some things.
 
+## copy_image.sh
+
+Use with CopyQ to get an image onto the clipboard and select it for pasting
+
+## tmux_devour.sh
+
+Launch a process in a new pane, zoom the pane, kill the pane when done.
+
+## tmux_sidebar.sh
+
+Create a sidebar (e.g. for reading manpages) and kill when done.
+
+## tmux_topbar.sh
+
+Create a vertical split (it's actually a bottombar) and kill when done.
 
 ## briefing.sh  
 
