@@ -5,9 +5,10 @@ Multiple scripts that are useful but don't deserve their own repository.
 
 A wrapper for youtube-dl to make easier (and automate) some things.
 
-## copy_image.sh
+## clipimg.sh
 
-Use with CopyQ to get an image onto the clipboard and select it for pasting
+Uses fzf, rofi, fd (optional), and CopyQ to choose an image, get it onto the 
+clipboard, and select it for pasting.  
 
 ## tmux_devour.sh
 
