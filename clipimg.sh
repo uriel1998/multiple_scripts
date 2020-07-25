@@ -2,15 +2,21 @@
 
 ##############################################################################
 #  Uses fzf or rofi to choose a clipart emoji (or reaction image) from a list,
-#  then copies it to the clipboard (using CopyQ) and selects it for pasting.
+#  then copies it to the clipboard (using xclip) and selects it for pasting.
 ##############################################################################
+
+#does this not work for gif?
 
 ##############################################################################
 # Init
 ##############################################################################
 EmojiPath="/home/steven/images2/emojis/"
-ReactionPath="/home/steven/images2/all_reactions/"
+ReactionPath="/home/steven/images2/static_reaction/"
 FD_FIND=$(which fdfind)
+TempSearchPath=""
+Emoji="true"
+Reaction="true"
+Choices=""
 
 ##############################################################################
 # Show the Help
@@ -20,8 +26,24 @@ display_help(){
     echo "#  copyimage.sh [-h|-c]"
     echo "# -h show help "
     echo "# -c cli/tui interface only. Default is GUI. "
-    echo "# -e select emoji. Default is reaction. "    
+    echo "# -e select emoji only. Default is both. "      
+    echo "# -r select reaction only. Default is both. "
     echo "###################################################################"
+}
+
+##############################################################################
+# So that you can join two (or more) directories worth of choices
+# If fdfind (what "fd" is called on Debian) is installed, it will be used 
+##############################################################################
+
+build_search_items() {
+    if [ -f "$FD_FIND" ];then
+        Choices+=$(fdfind -a -e png -e jpg . "$TempSearchPath")
+    else
+        Choices+=$(find -H "$SearchPath" -type f -iname "*.png" -or -iname "*.jpg")
+    fi
+    Choices+="\n"
+    TempSearchPath=""
 }
 
 
@@ -32,18 +54,25 @@ display_help(){
         -h) display_help
             exit
             shift ;;         
-        -e) Emoji="true"
+        -r) Emoji="false"  #this is actually a negative selector
             shift ;;      
+        -e) Reaction="false"
+            shift ;;
         -c) CliOnly="true"
             shift ;;      
         esac
     done    
 
-    # If you have a lot of options, you could use a case statement here
+    
+    # Creating the search items by just adding more. You can see how more 
+    # switches and directories can be added here.
     if [ "$Emoji" == "true" ];then
-        SearchPath="$EmojiPath"
-    else
-        SearchPath="$ReactionPath"
+        TempSearchPath="$EmojiPath"
+        build_search_items
+    fi
+    if [ "$Reaction" == "true" ];then
+        TempSearchPath="$ReactionPath"
+        build_search_items
     fi
 
 ##############################################################################
@@ -53,24 +82,15 @@ display_help(){
 # --preview 'chafa {}' 
 # to the fzf string to get the preview window
 #    
-# If fdfind (what "fd" is called on Debian) is installed, it will be used preferentially
-#
+# AFAIK there's no way to preview with rofi
 ##############################################################################
 
-    if [ -f "$FD_FIND" ];then
-        if [ "$CliOnly" == "true" ];then
-            SelectedImage=$(fdfind -a -e png -e jpg -e gif . "$SearchPath" | fzf --no-hscroll -m --height 50% --border --ansi --no-bold --header "Which Reaction?" | realpath -p )
-        else
-            #use ROFI, not zenity 
-            SelectedImage=$(fdfind -a -e png -e jpg -e gif . "$SearchPath"  | rofi -i -dmenu -p "Which Reaction?" -theme DarkBlue | realpath -p)
-        fi
+    
+    if [ "$CliOnly" == "true" ];then
+        SelectedImage=$(echo -e "$Choices" | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which Reaction?" --preview 'chafa {}'  | realpath -p )
     else
-        if [ "$CliOnly" == "true" ];then
-            SelectedImage=$(find -H "$SearchPath" -type f -iname "*.png" -or -iname "*.gif" -or -iname "*.jpg"  | fzf --no-hscroll -m --height 50% --border --ansi --no-bold --header "Which Reaction?" | realpath -p )
-        else
-            #use ROFI, not zenity 
-            SelectedImage=$(find -H "$SearchPath" -type f -iname "*.png" -or -iname "*.gif" -or -iname "*.jpg"  | rofi -i -dmenu -p "Which Reaction?" -theme DarkBlue | realpath -p)
-        fi
+        #use ROFI, not zenity 
+        SelectedImage=$(echo -e "$Choices" | rofi -i -dmenu -p "Which Reaction?" -theme DarkBlue | realpath -p)
     fi
 
 ##############################################################################
@@ -79,6 +99,9 @@ display_help(){
 
 if [ -f "$SelectedImage" ];then
     mime=$(mimetype "$SelectedImage" | awk -F ': ' '{print $2}')
-    /usr/bin/copyq write 0 "$mime" - < "$SelectedImage"
-    /usr/bin/copyq select 0
+    # Tee does not seem to like binary data...
+    xclip -i -selection primary -t "$mime" < "$SelectedImage" > /dev/null
+    xclip -i -selection clipboard -t "$mime" < "$SelectedImage" > /dev/null
+    #/usr/bin/copyq write 0 "$mime" - < "$SelectedImage"
+    #/usr/bin/copyq select 0
 fi
