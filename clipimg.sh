@@ -43,7 +43,7 @@ build_search_items() {
         Choices+=$(find -H "$SearchPath" -type f -iname "*.png" -or -iname "*.jpg")
     fi
     Choices+="\n"
-    TempSearchPath=""
+    TempSearchPath=""       
 }
 
 
@@ -75,6 +75,10 @@ build_search_items() {
         build_search_items
     fi
 
+    SortTemp=$(echo -e "$Choices" | sort -t '/' -k 6)
+    Choices="$SortTemp"
+
+
 ##############################################################################
 # Select that Image!
 #    
@@ -102,6 +106,7 @@ if [ -f "$SelectedImage" ];then
     # Tee does not seem to like binary data...
     xclip -i -selection primary -t "$mime" < "$SelectedImage" > /dev/null
     xclip -i -selection clipboard -t "$mime" < "$SelectedImage" > /dev/null
-    #/usr/bin/copyq write 0 "$mime" - < "$SelectedImage"
-    #/usr/bin/copyq select 0
+    #if you use copyq you need these lines to have it offer up the selection
+    /usr/bin/copyq write 0 "$mime" - < "$SelectedImage"
+    /usr/bin/copyq select 0
 fi
