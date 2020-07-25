@@ -8,7 +8,8 @@ A wrapper for youtube-dl to make easier (and automate) some things.
 ## clipimg.sh
 
 Uses fzf, rofi, fd (optional), and xclip to choose an image, get it onto the 
-clipboard, and select it for pasting.  
+clipboard, and select it for pasting.  Works for JPG and PNG, does NOT work for 
+GIF, sadly.
 
 ## tmux_devour.sh
 

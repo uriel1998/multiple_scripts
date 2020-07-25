@@ -82,7 +82,7 @@ build_search_items() {
 # --preview 'chafa {}' 
 # to the fzf string to get the preview window
 #    
-# AFAIK there's no way to preview with rofi
+# AFAIK there's no way to preview with rofi 
 ##############################################################################
 
     
