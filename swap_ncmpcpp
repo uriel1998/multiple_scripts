@@ -1,0 +1,79 @@
+#! /bin/bash
+
+#this is to switch ncmpcpp 
+
+#Declarations
+hoststring0="PASS@HOST #2 (or just HOST if no password set)"
+hoststring1="PASS@HOST #2 (or just HOST if no password set)"
+current=""
+pid=""
+
+ function getInfo() {
+	#mpdinfo=$(mpc --host "$hoststring"  )
+	playingstring=$(echo "$mpdinfo" | head -1 | awk -F '[' '{print $1}' | fold -sw 58 | head -1 ) 
+	percent=$(echo "$mpdinfo" | tail -2 | head -1 | awk '{print $4}')
+    printf "%s: %s" "$playingstring" "$percent"
+}
+
+function isplaying() {
+    mpdinfo=$(mpc --host "$hoststring" | sed -e 's/[/()&]//g')
+    progress=$(echo "$mpdinfo" | tail -2 | head -1 | awk '{print $1" "$3 $4}')
+    check=$(echo "$progress" | grep -c '\[')
+}
+
+function main() {
+    
+    #note to self you could check for the entire name of the process too and 
+    # whether or not it has the specified host
+while true; do
+    
+    hoststring=${hoststring1} #check remote
+    isplaying
+    echo "ah"
+    if [ $check != 0 ];then     #remote is playing
+        if [ "$current" != "$hoststring" ];then  # only do if we aren't currently on that host
+            current=${hoststring}
+            if [ ! -z $pid ];then
+                kill -9 "$pid" &> /dev/null
+            fi
+            eval ncmpcpp --host "$hoststring"  
+            pid=$(echo $!)
+            current=${hoststring}
+            continue
+        fi
+    fi
+    hoststring=${hoststring0} #check local
+    if [[ -z "$NotFirst" ]];then
+        NotFirst="We've run once"
+        check=1
+        echo "FA"
+                current="First Time!"
+        echo "$check $hoststring"
+
+    fi
+    if [ $check != 0 ];then     #local is playing
+        if [ "$current" != "$hoststring" ];then  # only do if we aren't currently on that host
+            current=${hoststring}            
+            if [ ! -z $pid ];then
+                kill -9 "$pid" &> /dev/null
+            fi
+            eval ncmpcpp --host "$hoststring"  
+            pid=$(echo $!)
+            continue
+        fi
+    fi
+    
+    
+
+    echo "If you are seeing this, neither MPD instance is running. Ctrl-C to exit or start one to resume!"
+    mpc --host "$hoststring" idle &> /dev/null  
+done
+
+}
+
+
+current=${hoststring0}  #starting it locally so the idle loop has a place to go
+main
+
+
+
