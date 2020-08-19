@@ -1,6 +1,11 @@
 # multiple_scripts
 Multiple scripts that are useful but don't deserve their own repository.  
 
+## mansearch.sh
+
+Uses fzf and such to search both manpages and tldr and cheatsheets with preview. Run 
+mansearch -p to update database preemptively.
+
 ## ytube.sh
 
 A wrapper for youtube-dl to make easier (and automate) some things.
