@@ -1,0 +1,22 @@
+# Very simple PS1 helper utils to just show that a git dir needs work and to shorten the home path on PS1
+
+function getgit {
+    if [ "$PWD" == "$HOME" ];then
+        GStatus=$(config status --porcelain 2>/dev/null | grep -c -e "^ [MADRC]") 
+    else
+        GStatus=$(git status --porcelain 2>/dev/null | grep -c -e "^[MADRC]")
+    fi
+
+    if [ "$GStatus" != "0" ];then
+        echo "👷"
+    fi
+}
+
+#Turns shortens out my home path to ~ in prompt
+function get_pwd() {
+    if [ ${#PWD} -gt 65 ];then  
+        pwd| sed 's@'"$HOME"'@~@'
+    else
+        pwd
+    fi
+}
