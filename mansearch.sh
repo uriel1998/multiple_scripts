@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#Strongly inspired by [macho](https://hiphish.github.io/blog/2020/05/31/macho-man-command-on-steroids/)
+
 CacheFile=$HOME/.config/mansearch_cachefile
 TempFile=$(mktemp)
 Long=0
