@@ -1,13 +1,12 @@
 #!/bin/bash
 
-
-#maybe use this as a setup for those programs and have a permanent sidebar?
-#tmux send-keys -t "%74" "chafa " "/home/steven/downloads/images/big_keys_for_logo.jpg" "C-m"
-# See the space!!!
-#replaces man command - makes help a fallback
-# use pick to deal with the output better
-#TOD
-
+##############################################################################
+#  
+#  tmux_topbar.sh
+#  By Steven Saus 
+#  (c) 2020; licensed under the MIT license
+#
+##############################################################################
     c_tmux=$(env | grep -c TMUX)
     if [ $c_tmux -gt 0 ];then
         command=$(echo "$@")

@@ -1,5 +1,19 @@
 #!/bin/bash
 
+##############################################################################
+#  
+#  ytube
+#  By Steven Saus 
+#  (c) 2020; licensed under the MIT license
+#
+#  My personal helper script for youtube-dl
+##############################################################################
+#TODO - ADD IN DOWNLOAD PLAYLIST OPTION
+#TODO - re-implement batch file list input
+#TODO - MAKE SO TUI is default
+#TODO - Update youtube-dl when first activated via pip, venv, etc?
+
+
 ACTION=""
 GUI=""
 
@@ -61,9 +75,6 @@ option="$1"
     esac
 done
 
-#TODO - ADD IN DOWNLOAD PLAYLIST OPTION
-#TODO - re-implement batch file list input
-#TODO - MAKE SO TUI is default
 if [[ "$URL" = "" ]];then
     URL=$(zenity --timeout 30 --entry --text "What is the YouTube URL?" --entry-text "")
     if [[ "$URL" = "" ]];then
@@ -71,7 +82,6 @@ if [[ "$URL" = "" ]];then
     fi
 fi
 
-#TODO - MAKE SO TUI is default    
 if [[ "$ACTION" = "" ]];then
     ACTION=$(zenity --timeout 30 --list --column "Pick" --column "Opinion"  --text "Which action?" --radiolist TRUE "VIDEO" FALSE "AUDIO" FALSE "BOTH" FALSE "PLAY");
     if [[ "$ACTION" = "" ]];then

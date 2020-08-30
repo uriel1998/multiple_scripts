@@ -1,6 +1,11 @@
 #!/bin/bash
 
 ##############################################################################
+#  
+#  clipimg.sh 
+#  By Steven Saus 
+#  (c) 2020; licensed under the MIT license
+#
 #  Uses fzf or rofi to choose a clipart emoji (or reaction image) from a list,
 #  then copies it to the clipboard (using xclip) and selects it for pasting.
 ##############################################################################

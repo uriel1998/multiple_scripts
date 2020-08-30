@@ -3,6 +3,10 @@
 
 ##############################################################################
 #  
+#  books_search.sh 
+#  By Steven Saus 
+#  (c) 2020; licensed under the MIT license
+#
 # Find and open an ebook from your Calibre library without, ahem, opening your 
 # Calibre library. Feeds in format, author, and title to fzf / rofi for you 
 # to choose, then uses epy/epr/conversion for TUI/CLI and xdg-open for GUI.
