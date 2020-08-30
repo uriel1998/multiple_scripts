@@ -21,13 +21,14 @@
 # switch. 
 #
 # You can also regenerate it immediately before a run by using the -r switch
+#
+# Use -m to utilize ebook metadata instead of the file structure mentioned above.
 ##############################################################################
 
 
-#TODO: Get file info without relying on Calibre structure
-
 # Books directory
 BOOKS_DIR="/home/steven/documents/Calibre Library/"
+EXIFTOOL=$(which exiftool)
 FD_FIND=$(which fdfind)
 EPY=$(which epy) #https://github.com/wustho/epy
 EPR=$(which epr) #https://github.com/wustho/epr
@@ -35,6 +36,7 @@ declare -a FILES
 REGEN="false"
 CliOnly="true"
 CacheFile="$HOME/.cache/book_search_cache"
+CALIBRE_STRUCTURE="true"
 # So that I don't have to worry about the structure of the path too hard
 SLASHES=$(echo "$BOOKS_DIR" | grep -o '/' | wc -l)
 ((SLASHES++))
@@ -52,18 +54,30 @@ gen_list (){
     fi
 
     echo "" > $CacheFile
-    for ((i = 0; i < ${#FILES[@]}; i++));do
-        FILES[$i]=$(echo "${FILES[$i]}" | tr -d '\n')
-        shortfile=$(basename "${FILES[$i]}")
-        EXT=${shortfile##*.}
-        PATH0=$(dirname "${FILES[$i]}")
-        PATH1=$(echo "$PATH0" | cut -d '/' -f ${SLASHES}- )
-        #echo "$PATH1 @"
-        AUTHOR=$(echo "$PATH1" | awk -F '/' '{print $1}')
-        TITLE=$(echo "$PATH1" | awk -F '/' '{print $2}' | awk -F '(' '{print $1}')
-        printf "%s | %s | %s | %s \n" "${EXT}" "${AUTHOR}" "${TITLE}" "${FILES[$i]}" >> $CacheFile
-    done
-
+    if [ "$CALIBRE_STRUCTURE" == "true" ];then
+        for ((i = 0; i < ${#FILES[@]}; i++));do
+            FILES[$i]=$(echo "${FILES[$i]}" | tr -d '\n')
+            shortfile=$(basename "${FILES[$i]}")
+            EXT=${shortfile##*.}
+            PATH0=$(dirname "${FILES[$i]}")
+            PATH1=$(echo "$PATH0" | cut -d '/' -f ${SLASHES}- )
+            #echo "$PATH1 @"
+            AUTHOR=$(echo "$PATH1" | awk -F '/' '{print $1}')
+            TITLE=$(echo "$PATH1" | awk -F '/' '{print $2}' | awk -F '(' '{print $1}')
+            printf "%s | %s | %s | %s \n" "${EXT}" "${AUTHOR}" "${TITLE}" "${FILES[$i]}" >> $CacheFile
+        done
+    else
+        for ((i = 0; i < ${#FILES[@]}; i++));do
+            metadata=""
+            FILES[$i]=$(echo "${FILES[$i]}" | tr -d '\n')
+            metadata=$(exiftool "${FILES[$i]}")
+            AUTHOR=$(echo "$metadata" | grep -e "^Creator" | grep -v "Creator Id" | awk -F ':' '{print $2}'| xargs)
+            TITLE=$(echo "$metadata" | grep -e "^Title" | grep -v "Title Id" | awk -F ':' '{print $2}'| xargs)
+            EXT=$(echo "$metadata" | grep -e "^File Type Extension" | awk -F ':' '{print $2}' | xargs)
+            printf "%s | %s | %s | %s \n" "${EXT}" "${AUTHOR}" "${TITLE}" "${FILES[$i]}" >> $CacheFile
+        done
+    fi
+    
 }
 
 
@@ -141,6 +155,8 @@ display_help(){
     echo "# -r regenerate booklist (and run) "
     echo "# -e regenerate booklist (and exit) "
     echo "# -g use GUI (rofi) "
+    echo "# -m Use ebook metadata, not file structure"
+    echo "# FAIR WARNING: PDF METADATA IS OFTEN BORKED BEYOND RECOGNITION!"
     echo "###################################################################"
 }
 
@@ -150,6 +166,8 @@ display_help(){
     while [ $# -gt 0 ]; do
     option="$1"
         case $option in
+        -m) CALIBRE_STRUCTURE="false"
+            shift ;;      
         -h) display_help
             exit
             shift ;;      
