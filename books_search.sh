@@ -87,32 +87,42 @@ main() {
     #extra xargs to strip newlines and whitespace
     book=$( echo "$SelectedBook" | awk -F '|' '{print $4}' | xargs)
     type=$( echo "$SelectedBook" | awk -F '|' '{print $1}' | xargs)
-    echo "$book"
-    read
+
     if [ -n "$book" ]; then
-        if [ "$CliOnly" == "true" ];then
-            case "$type" in
-                pdf)
-                    ;;
-                mobi|azw3)
-                    ;;
-                
-        
-        
-            if [ -f "$EPY" ];then
-                executeme=$(printf "%s \"%s\"" "$EPY" "$book")
-                eval "$executeme"
-            elif [ -f "$EPR" ];then
-                executeme=$(printf "%s \"%s\"" "$EPR" "$book")
-                eval "$executeme"
-            else
-                xdg-open "${book}"
-            fi
+        if [ "$CliOnly" == "false" ];then
+             xdg-open "${book}"
         else
-            xdg-open "${book}"
+            if [ ! -f "$EPY" ] && [ ! -f "$EPR" ];then
+                # there is no sense doing extra processing if xdg-open is just 
+                # going to handle it.
+                xdg-open "${book}"
+            else
+                case "$type" in
+                    pdf)    
+                        tmpfile=$(mktemp)
+                        ## Pick the one you like!
+                        pdftotext -nopgbrk -layout "${book}" "$tmpfile"; bat "$tmpfile"; rm "$tmpfile"
+                        #pdftohtml -c -i -s -zoom 1 "${book}" "$tmpfile"; www-browser "$tmpfile"; rm "$tmpfile"
+                        exit 0
+                        ;;
+                    mobi|azw3)
+                        tmpdir=$(mktemp -d)
+                        # You hopefully have calibre?
+                        ebook-convert "${book}" "$tmpdir/out.epub"  
+                        book=$(echo "$tmpdir/out.epub")
+                        ;;
+                    *) echo "Calling reader"
+                        ;;
+                esac
+                if [ -f "$EPY" ];then
+                    executeme=$(printf "%s \"%s\"" "$EPY" "$book")
+                    eval "$executeme"
+                elif [ -f "$EPR" ];then
+                    executeme=$(printf "%s \"%s\"" "$EPR" "$book")
+                    eval "$executeme"
+                fi
+            fi
         fi
-        
-    #
     else
         echo "Book file not found!"  1>&2
         exit 1
