@@ -19,7 +19,7 @@
         printf '\033]2;%s\033\\' 'topbar'
         tmux resize-pane -t "$c_pane" -U 14
         #tmux select-pane -m -t "$c_pane"
-        command2=$(echo "$command ; tmux kill-pane -t ${c_pane}")
+        command2=$(echo "eval \"${command}\"  ; tmux kill-pane -t ${c_pane}")
         tmux send-keys -t "$c_pane" "$command2" C-m
         tmux last-pane
         #tmux send-keys -t "$o_pane" C-o C-m

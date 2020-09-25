@@ -18,7 +18,7 @@
         #tmux swap-pane -s "$o_pane" -t "$c_pane"
         printf '\033]2;%s\033\\' 'topbar'
         tmux resize-pane -t "$c_pane" -R 30
-        command2=$(echo "$command ; tmux kill-pane -t ${c_pane}")
+        command2=$(echo "eval \"${command}\" ; tmux kill-pane -t ${c_pane}")
         tmux send-keys -t "$c_pane" "$command2" C-m
         tmux last-pane
         #tmux send-keys -t "$o_pane" C-o C-m
