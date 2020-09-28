@@ -15,7 +15,7 @@
         command=$(echo "$@")
         o_pane=$(tmux list-panes -F "#D")
         tmux split-window -h 
-        c_pane=$(tmux list-panes -F "#D")
+        c_pane=$(tmux list-panes -F "#D" | grep -v "$o_pane")
         # Uncomment for left hand sidebar
         #tmux swap-pane -s "$o_pane" -t "$c_pane"
         printf '\033]2;%s\033\\' 'topbar'
