@@ -8,6 +8,7 @@ or inaccurate!
 ## sr.sh
 
 A transparent wrapper for surfraw that utilizes fzf 
+https://terminalizer.com/view/4d1fd3b34309
 
 ## ytube.sh
 
