@@ -22,7 +22,7 @@ if [[ "${FirstVar}" == "-g" ]];then
 fi
 
 # read in array of elvi
-readarray -t sr_elvi < <(sr -elvi | awk '{print $1}')
+readarray -t sr_elvi < <("${Binary}" -elvi | awk '{print $1}')
 
 # Was the elvi specified on the command line?
 if [[ " ${sr_elvi[@]} " =~ " ${FirstVar} " ]]; then
@@ -33,7 +33,7 @@ fi
 
 # use fzf to determine which elvi to use
 if [[ ! " ${sr_elvi[@]} " =~ " ${FirstVar} " ]]; then
-    Elvi=$(sr -elvi | fzf --multi | awk '{print $1}')
+    Elvi=$("${Binary}" -elvi | fzf --multi | awk '{print $1}')
     
     # If nothing selected, assume it's the default and pass it all to sr
     if [ -z "${Elvi}" ];then
