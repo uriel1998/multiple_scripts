@@ -15,7 +15,7 @@
         command=$(echo "$@")
         tmux split-window -h 
         #"$command"
-        c_pane=$(tmux ls -F "#D")
+        c_pane=$(tmux list-panes -F "#D")
         printf '\033]2;%s\033\\' 'devour'
         tmux resize-pane -t "$c_pane" -R 20
         tmux select-pane -m -t "$c_pane"

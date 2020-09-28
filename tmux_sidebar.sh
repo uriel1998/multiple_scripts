@@ -13,9 +13,9 @@
     c_tmux=$(env | grep -c TMUX)
     if [ $c_tmux -gt 0 ];then
         command=$(echo "$@")
-        o_pane=$(tmux ls -F "#D")
+        o_pane=$(tmux list-panes -F "#D")
         tmux split-window -h 
-        c_pane=$(tmux ls -F "#D")
+        c_pane=$(tmux list-panes -F "#D")
         # Uncomment for left hand sidebar
         #tmux swap-pane -s "$o_pane" -t "$c_pane"
         printf '\033]2;%s\033\\' 'topbar'
