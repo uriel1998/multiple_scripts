@@ -1,10 +1,13 @@
 # multiple_scripts
 Multiple scripts that are useful but don't deserve their own repository.  
 
-## mansearch.sh
+This is often a repository when I work on small ideas until they're big enough 
+to deserve thier own repo and README.  This readme may very well be outdated 
+or inaccurate!
 
-Uses fzf and such to search both manpages and tldr and cheatsheets with preview. Run 
-mansearch -p to update database preemptively.
+## sr.sh
+
+A transparent wrapper for surfraw that utilizes fzf 
 
 ## ytube.sh
 
@@ -26,7 +29,7 @@ Create a sidebar (e.g. for reading manpages) and kill when done.
 
 ## tmux_topbar.sh
 
-Create a vertical split (it's actually a bottombar) and kill when done.
+Create a vertical split and kill when done.
 
 ## briefing.sh  
 
