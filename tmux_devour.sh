@@ -13,9 +13,10 @@
     c_tmux=$(env | grep -c TMUX)
     if [ $c_tmux -gt 0 ];then
         command=$(echo "$@")
+        o_pane=$(tmux list-panes -F "#D")
         tmux split-window -h 
         #"$command"
-        c_pane=$(tmux list-panes -F "#D")
+        c_pane=$(tmux list-panes -F "#D" | grep -v "$o_pane")
         printf '\033]2;%s\033\\' 'devour'
         tmux resize-pane -t "$c_pane" -R 20
         tmux select-pane -m -t "$c_pane"
