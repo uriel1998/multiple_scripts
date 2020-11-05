@@ -10,6 +10,22 @@
 #  then copies it to the clipboard (using xclip) and selects it for pasting.
 ##############################################################################
 
+#https://bbs.archlinux.org/viewtopic.php?id=144741
+
+#Example of how to copy image to clipboard from sxiv:
+
+# Add to config.h of sxiv
+#{ true, XK_c, it_shell_cmd, (arg_t)"xcmenu -bwi image/png < \"$SXIV_IMG\"; xcmenu -bi text/uri-list \"$SXIV_IMG\"" },
+
+#Even though, it stores it in image/png. At least sxiv itself and gimp will open the file fine in any file format you copy to the buffer for some reason (even animated gifs work).
+
+#Add files to text/uri-list copy buffer:
+
+#echo "file:///home/user/README\nfile:///home/user/video.mkv" | xcmenu -bi text/uri-list
+
+#This works at least with qtfm which is the only graphical fm I have installed for testing atm.
+#It should be possible to integrate this with ranger for example I think.
+
 #does this not work for gif?
 
 ##############################################################################
