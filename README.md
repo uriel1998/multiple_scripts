@@ -5,6 +5,11 @@ This is often a repository when I work on small ideas until they're big enough
 to deserve thier own repo and README.  This readme may very well be outdated 
 or inaccurate!
 
+
+## set-xwindow-icon-by-pid.sh
+
+Does exactly what it says on the tin. $1 is the string to search, $2 is the path to the icon file
+
 ## sr.sh
 
 A transparent wrapper for surfraw that utilizes fzf 
