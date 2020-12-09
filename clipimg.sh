@@ -28,11 +28,15 @@
 
 #does this not work for gif?
 
+# this does work with gifs if you have DRAGON installed:
+# https://github.com/mwh/dragon
+# and will preferentially use DRAGON if it is in your path
+
 ##############################################################################
 # Init
 ##############################################################################
 EmojiPath="/home/steven/images2/emojis/"
-ReactionPath="/home/steven/images2/static_reaction/"
+ReactionPath="/home/steven/images2/all_reactions/"
 IconPath="/home/steven/.icons/"
 ClipartPath="/home/steven/documents/resources/"
 FD_FIND=$(which fdfind)
@@ -43,6 +47,8 @@ Icon="false"
 Clipart="false"
 CliOnly="true"
 Choices=""
+DRAGON_bin=$(which dragon)
+
 
 ##############################################################################
 # Show the Help
@@ -65,10 +71,18 @@ display_help(){
 ##############################################################################
 
 build_search_items() {
-    if [ -f "$FD_FIND" ];then
-        Choices+=$(fdfind -a -e png -e jpg . "$TempSearchPath")
+    if [ ! -z "$DRAGON_bin" ];then
+        if [ -f "$FD_FIND" ];then
+            Choices+=$(fdfind -a -e png -e jpg -e gif . "$TempSearchPath")
+        else
+            Choices+=$(find -H "$SearchPath" -type f -iname "*.png" -or -iname "*.jpg" -or -iname "*.gif")
+        fi        
     else
-        Choices+=$(find -H "$SearchPath" -type f -iname "*.png" -or -iname "*.jpg")
+        if [ -f "$FD_FIND" ];then
+            Choices+=$(fdfind -a -e png -e jpg . "$TempSearchPath")
+        else
+            Choices+=$(find -H "$SearchPath" -type f -iname "*.png" -or -iname "*.jpg")
+        fi
     fi
     Choices+="\n"
     TempSearchPath=""       
@@ -157,17 +171,22 @@ build_search_items() {
 ##############################################################################
 
 if [ -f "$SelectedImage" ];then
-    mime=$(mimetype "$SelectedImage" | awk -F ': ' '{print $2}')
-    # Tee does not seem to like binary data...
-    xclip -i -selection primary -t "$mime" < "$SelectedImage" > /dev/null
-    xclip -i -selection clipboard -t "$mime" < "$SelectedImage" > /dev/null
-    #if you use copyq you need these lines to have it offer up the selection
-    /usr/bin/copyq write 0 "$mime" - < "$SelectedImage"
-    /usr/bin/copyq select 0
+    if [ ! -z "$DRAGON_bin" ];then
+        `$DRAGON_bin -a -x "$SelectedImage" &`
+    else
+        mime=$(mimetype "$SelectedImage" | awk -F ': ' '{print $2}')
+        # Tee does not seem to like binary data...
+        xclip -i -selection primary -t "$mime" < "$SelectedImage" > /dev/null
+        xclip -i -selection clipboard -t "$mime" < "$SelectedImage" > /dev/null
+        #if you use copyq you need these lines to have it offer up the selection
+        /usr/bin/copyq write 0 "$mime" - < "$SelectedImage"
+        /usr/bin/copyq select 0
+        # putting the filename in the second position
+        if [ "$Icon" == "true" ] || [ "$Clipart" == "true" ];then
+            /usr/bin/copyq insert 1 "$SelectedImage"
+            /usr/bin/copyq select 0
+        fi
+    fi
 fi
 
-# putting the filename in the second position
-if [ "$Icon" == "true" ] || [ "$Clipart" == "true" ];then
-    /usr/bin/copyq insert 1 "$SelectedImage"
-    /usr/bin/copyq select 0
-fi
+
