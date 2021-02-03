@@ -4,7 +4,7 @@
 #
 
 # command to launch VirtualBox
-VBox_launcher_command='VBoxManage startvm '
+VBox_launcher_command='VBoxHeadless-startvm'
 
 function generate_vbox_menu {
 
