@@ -32,7 +32,7 @@ do
     esac
     echo "$tmpcmd"
     
-done | sort | uniq |\
+done | sort | awk '!_[$0]++' |\
 while read q
 do
     if [ -n "$q" ];then

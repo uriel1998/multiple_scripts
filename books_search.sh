@@ -113,7 +113,7 @@ main() {
             if [ ! -f "$EPY" ] && [ ! -f "$EPR" ];then
                 # there is no sense doing extra processing if xdg-open is just 
                 # going to handle it.
-                xdg-open "${book}"
+                xdg-open \""${book}"\"
             else
                 case "$type" in
                     pdf)    
