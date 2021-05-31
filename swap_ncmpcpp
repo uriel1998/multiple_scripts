@@ -29,7 +29,6 @@ while true; do
     
     hoststring=${hoststring1} #check remote
     isplaying
-    echo "ah"
     if [ $check != 0 ];then     #remote is playing
         if [ "$current" != "$hoststring" ];then  # only do if we aren't currently on that host
             current=${hoststring}
