@@ -29,9 +29,9 @@ export KPDB=${KPDB}
 if [ ! -z "${1}" ];then 
     echo "${KPPW}" | keepassxc-cli show -s "${KPDB}" "${1}" 2> /dev/null
     exit
-else 
-    SCRIPTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
-    KPVALUE=$(echo "${KPPW}" | keepassxc-cli ls --recursive --flatten "${KPDB}" | fzf --no-hscroll -m --ansi --no-bold --preview="$SCRIPTDIR/kpf.sh {}" )
+else
+    SCRIPTNAME=$(realpath "$0")
+    KPVALUE=$(echo "${KPPW}" | keepassxc-cli ls --recursive --flatten "${KPDB}" | fzf --no-hscroll -m --ansi --no-bold --preview="$SCRIPTNAME {}" )
     echo "${KPPW}" | keepassxc-cli show -s "${KPDB}" "${KPVALUE}" -a password 2> /dev/null | xsel -p ; xsel -o | xsel -b
     printf "\nThe password is copied to the clipboard.\n"
     printf "Username is %s"  "$(echo "${KPPW}" | keepassxc-cli show -s "${KPDB}" "${KPVALUE}" -a username 2> /dev/null)"
