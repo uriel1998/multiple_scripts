@@ -3,8 +3,15 @@ Multiple scripts that are useful but don't deserve their own repository.
 
 This is often a repository when I work on small ideas until they're big enough 
 to deserve thier own repo and README.  This readme may very well be outdated 
-or inaccurate!
+or inaccurate!  
 
+## kpf.sh
+
+Uses [fd](https://github.com/sharkdp/fd), [fzf](https://github.com/junegunn/fzf), 
+and [keepassxc-cli](https://www.mankier.com/1/keepassxc-cli) to provide a quick 
+and easy way to *retrieve* passwords from the command line.  By default copies 
+the password to the clipboard.  If you don't want to type your password (or select 
+your database location) every time, you can set them as environment variables. 
 
 ## set-xwindow-icon-by-pid.sh
 
