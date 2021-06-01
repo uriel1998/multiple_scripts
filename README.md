@@ -13,6 +13,8 @@ and easy way to *retrieve* passwords from the command line.  By default copies
 the password to the clipboard.  If you don't want to type your password (or select 
 your database location) every time, you can set them as environment variables. 
 
+See [this post](https://ideatrash.net/2021/05/kpf-keepassxc-with-fzf-in-bash.html) for details.
+
 ## set-xwindow-icon-by-pid.sh
 
 Does exactly what it says on the tin. $1 is the string to search, $2 is the path to the icon file
