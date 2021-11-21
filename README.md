@@ -8,7 +8,7 @@ or inaccurate!
 ## yad-todo.sh
 
 Uses [yad](https://smokey01.com/yad/) to present a simple GUI for adding 
-entries to todo.txt file.
+entries to todo.txt file.  See the yad-todo.png file for what it might look like.
 
 ## kpf.sh
 

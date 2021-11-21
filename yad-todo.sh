@@ -27,7 +27,7 @@ contexts=$(echo " \!${contexts::-2}")
 priority=" \!A\!B\!C\!D\!E\!F\!G\!H\!I\!J\!K\!L\!M\!N\!O\!P\!Q\!R\!S\!T\!U\!V\!W\!X\!Y\!Z"
 blankentry=" \!"
 
-OutString=$(yad --form --date-format="%Y:%m:%d" --width=400 --center --window-icon=gtk-info --borders 3 --field="Task" New_Task --field="Context:CBE" ${contexts} --field="Project:CBE" ${projects} --field="Priority:CBE" ${priority} --field="Due Date::DT" )
+OutString=$(yad --form --title="todo.txt entry" --date-format="%Y:%m:%d" --width=400 --center --window-icon=gtk-info --borders 3 --field="Task" New_Task --field="Context:CBE" ${contexts} --field="Project:CBE" ${projects} --field="Priority:CBE" ${priority} --field="Due Date::DT" )
 
 
 NewTask=$(echo "$OutString" | awk -F '|' '{print $1}') 
