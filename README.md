@@ -5,6 +5,11 @@ This is often a repository when I work on small ideas until they're big enough
 to deserve thier own repo and README.  This readme may very well be outdated 
 or inaccurate!  
 
+## yad-todo.sh
+
+Uses [yad](https://smokey01.com/yad/) to present a simple GUI for adding 
+entries to todo.txt file.
+
 ## kpf.sh
 
 Uses [fd](https://github.com/sharkdp/fd), [fzf](https://github.com/junegunn/fzf), 
