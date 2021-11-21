@@ -9,6 +9,7 @@ or inaccurate!
 
 Uses [yad](https://smokey01.com/yad/) to present a simple GUI for adding 
 entries to todo.txt file.  See the yad-todo.png file for what it might look like.
+If the program is not running, ensure that it is getting the `todo.txt` file passed to it!
 
 ## kpf.sh
 

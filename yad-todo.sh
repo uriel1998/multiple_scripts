@@ -8,6 +8,9 @@
 #   First argument is the path to todo.txt if it's not already exported 
 #   as TODO_FILE.  Simply designed for quick entry.
 #   
+#   If the program is not running, ensure that it is getting the todo.txt 
+#   file passed to it!
+#
 ########################################################################
 
 ToDoTxtFile="$1"
