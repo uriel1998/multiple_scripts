@@ -58,5 +58,5 @@ if [ "$NewPriority" != "" ];then
 fi
 NewDate=$(echo "$OutString" | awk -F '|' '{print $5}') 
 		
-TaskString=$(printf "/usr/bin/todo-txt add \"%s %s %s %s %s\"" "$NewTask" "$NewContext" "$NewProject" "$NewPriority" "$NewDate")
+TaskString=$(printf "/usr/bin/todo-txt add \"%s %s %s %s %s\"" "$NewPriority" "$NewTask" "$NewContext" "$NewProject"  "$NewDate")
 eval "${TaskString}"
