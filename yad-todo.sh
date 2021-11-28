@@ -33,7 +33,7 @@ blankentry=" \!"
 OutString=$(yad --form --title="todo.txt entry" --date-format="%Y:%m:%d" --width=400 --center --window-icon=gtk-info --borders 3 --field="Task" New_Task --field="Context:CBE" ${contexts} --field="Project:CBE" ${projects} --field="Priority:CBE" ${priority} --field="Due Date::DT" )
 
 
-NewTask=$(echo "$OutString" | awk -F '|' '{print $1}') 
+NewTask=$(echo "$OutString" | sed "s/'/’/g" | sed 's/"/”/g' | awk -F '|' '{print $1}') 
 if [ "$NewTask" == "New_Task" ];then
     echo "Task not edited; exiting"
     exit 88
