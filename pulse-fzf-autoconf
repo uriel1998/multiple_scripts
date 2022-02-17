@@ -7,7 +7,8 @@
 #  (c) 2022; licensed under the MIT license
 #
 #  simply allows quick switching of pulse-autoconf from either fzf or 
-#  from command line switches (e.g. for use with Openbox, etc). 
+#  from command line switches (e.g. for use with Openbox, etc). Example OpenBox
+#  menu at the end of this file.
 # 
 #  Default presets from pulse-autoconf v 1.5.1 are
 #
@@ -30,11 +31,11 @@ if [ ! -f "${ConfigFile}" ];then
 fi
 
 if [ -z "$1" ];then
-
     AllPreset=$(grep "preset=" "${ConfigFile}" | awk -F '"' '{print $2}')
     CurrentPreset=$(grep "preset=" "${ConfigFile}" | grep -v -e "^#" | awk -F '"' '{print $2}')
     DesiredPreset=$(echo "${AllPreset}" | fzf)
 else
+    CurrentPreset=$(grep "preset=" "${ConfigFile}" | grep -v -e "^#" | awk -F '"' '{print $2}')
     DesiredPreset="$1"
 fi
 
@@ -44,3 +45,29 @@ if [ "${CurrentPreset}" != "${DesiredPreset}" ];then
     sed -i "s|#preset=\"${DesiredPreset}\"|preset=\"${DesiredPreset}\"|" "${ConfigFile}"
 fi
 
+###############################################################################
+# Example Openbox Menu
+#
+#        <menu id="pa-ac" label="pa-auto">
+#            <item label="None">
+#                <action name="Execute">#
+#                    <execute>       #
+#                        /home/steven/bin/pulse-fzf-autoconf None#
+#                    </execute>#
+#                </action>#
+#            </item>#
+#            <item label="Echo Cancellation">#
+#                <action name="Execute">#
+#                    <execute>       #
+#                        /home/steven/bin/pulse-fzf-autoconf EchoCancellation#
+#                    </execute>#
+#                </action>#
+#            </item>#
+#            <item label="Mixing">#
+#                <action name="Execute">#
+#                    <execute>       #
+#                        /home/steven/bin/pulse-fzf-autoconf EchoCancellationWithSourcesMix#
+#                    </execute>#
+#                </action>#
+#            </item>#
+#        </menu>#
