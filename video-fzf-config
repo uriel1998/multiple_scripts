@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+##############################################################################
+#  
+#  video-fzf-config
+#  By Steven Saus 
+#  (c) 2022; licensed under the MIT license
+#
+#
+#  You can find Linux-Fake-Background-Webcam at 
+#  https://github.com/fangfufu/Linux-Fake-Background-Webcam
+##############################################################################
+SCRIPTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
+LFBW="/home/steven/sourcecode/Linux-Fake-Background-Webcam/fake.py"
+
+get_active_cameras(){
+    for dev in `find /dev -iname 'video*' -printf "%f\n"`
+    do
+        sudo v4l2-ctl --list-formats --device /dev/$dev | \
+        grep -qE '\[[0-9]\]' && \
+        echo $dev `cat /sys/class/video4linux/$dev/name`
+    done
+}
+
+get_fake_cameras(){
+    for dev in `find /dev -iname 'video*' -printf "%f\n"`
+    do
+        sudo v4l2-ctl --list-formats --device /dev/$dev | echo $dev `cat /sys/class/video4linux/$dev/name` | grep "fake-cam"
+    done
+}
+
+fake_background (){
+  "${LFBW}" -b "${file_in}" --no-foreground -w "${real_cam}" -v "${fake_cam}" -W 640 -H 480
+}
+
+replace_video(){
+    $(which ffmpeg) -stream_loop -1 -re -i "${file_in}" -vcodec rawvideo -threads 0 -f v4l2 "${real_cam}"
+}
+
+if [ -z "$1" ];then
+    echo "Use --fake|-f for fake background, --replace|-r for replacing the stream"
+    exit 99
+fi
+
+gac=$(get_active_cameras)
+num_cameras=$(echo "${gac}" | grep -c ':')
+if [ $num_cameras -gt 1 ];then
+    real_cam=$(echo "${gac}" | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which camera to mask/replace?" | awk '{ printf("/dev/%s", $1) }' | xargs )
+else
+    real_cam=$(echo "${gac}" | awk '{ printf("/dev/%s", $1) }'| xargs )
+fi
+gfc=$(get_fake_cameras)
+num_fakes=$(echo "${gfc}" | grep -c 'fake-cam')
+if [ $num_fakes -eq 0 ];then
+    echo "modprobing v4l2 module..."
+    sudo modprobe v4l2loopback devices=1 exclusive_caps=1 video_nr=2 card_label="fake-cam"
+fi
+gfc=$(get_fake_cameras)
+num_fakes=$(echo "${gfc}" | grep -c ':')
+if [ $num_fakes -gt 1 ];then
+    fake_cam=$(echo "${gfc}" | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which fake v4l2 stream to use?" | awk '{ printf("/dev/%s", $1) }' | xargs )
+else
+    fake_cam=$(echo "${gfc}" | awk '{ printf("/dev/%s", $1) }'| xargs )
+fi
+
+echo "Using ${real_cam} and ${fake_cam}"
+
+# I can put in other options for LFBW later...
+
+if [ -z "$2" ];then
+    var=$(find /home/steven/documents/fake_backgrounds/ -type f -printf "%f\n" | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which file to read in?" | xargs )
+    file_in="/home/steven/documents/fake_backgrounds/${var}"
+else
+    file_in="$2"
+fi
+
+option="$1"
+    case $option
+    in
+    --replace|-r) replace_video;;
+    --fake|-f) fake_background ;;
+    esac
+
+echo "Removing v4l2 module"
+sudo modprobe --remove v4l2loopback
