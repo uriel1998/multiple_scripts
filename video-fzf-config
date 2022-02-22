@@ -6,7 +6,8 @@
 #  By Steven Saus 
 #  (c) 2022; licensed under the MIT license
 #
-#
+#  Requires the uvcdynctrl package.
+# 
 #  You can find Linux-Fake-Background-Webcam at 
 #  https://github.com/fangfufu/Linux-Fake-Background-Webcam
 ##############################################################################
