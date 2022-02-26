@@ -13,6 +13,7 @@
 ##############################################################################
 SCRIPTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
 LFBW="/home/steven/sourcecode/Linux-Fake-Background-Webcam/fake.py"
+BACKGROUND_PATH="/home/steven/documents/fake_backgrounds/"
 
 get_active_cameras(){
     for dev in `find /dev -iname 'video*' -printf "%f\n"`
@@ -31,7 +32,10 @@ get_fake_cameras(){
 }
 
 fake_background (){
-  "${LFBW}" -b "${file_in}" --no-foreground -w "${real_cam}" -v "${fake_cam}" -W 640 -H 480
+
+#youtube resolution
+  "${LFBW}" -b "${file_in}" --no-foreground -w "${real_cam}" -v "${fake_cam}" -W 854 -H 480  
+
 }
 
 replace_video(){
@@ -69,8 +73,8 @@ echo "Using ${real_cam} and ${fake_cam}"
 # I can put in other options for LFBW later...
 
 if [ -z "$2" ];then
-    var=$(find /home/steven/documents/fake_backgrounds/ -type f -printf "%f\n" | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which file to read in?" | xargs )
-    file_in="/home/steven/documents/fake_backgrounds/${var}"
+    var=$(find "${BACKGROUND_PATH}" -type f -printf "%f\n" | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which file to read in?" | xargs )
+    file_in="${BACKGROUND_PATH}${var}"
 else
     file_in="$2"
 fi
