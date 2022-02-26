@@ -33,8 +33,9 @@ get_fake_cameras(){
 
 fake_background (){
 
-#youtube resolution
-  "${LFBW}" -b "${file_in}" --no-foreground -w "${real_cam}" -v "${fake_cam}" -W 854 -H 480  
+# youtube resolution - setting this in this way breaks Zoom
+  #"${LFBW}" -b "${file_in}" --no-foreground -w "${real_cam}" -v "${fake_cam}" -W 854 -H 480  
+  "${LFBW}" -b "${file_in}" --no-foreground -w "${real_cam}" -v "${fake_cam}" 
 
 }
 
