@@ -5,6 +5,15 @@ This is often a repository when I work on small ideas until they're big enough
 to deserve thier own repo and README.  This readme may very well be outdated 
 or inaccurate!  
 
+## isobash
+
+A simple script using zenity and pkexec to allow for interactive mounting of ISO files with a GUI interface.
+
+## video-fzf-config and pulse-fzf-autoconf
+
+Scripts for moving and manipulating video and pulse streams easily.  See https://ideatrash.net/2022/02/manipulating-audio-and-video-streams-for-streaming-on-linux.html
+
+
 ## yad-todo.sh
 
 Uses [yad](https://smokey01.com/yad/) to present a simple GUI for adding 

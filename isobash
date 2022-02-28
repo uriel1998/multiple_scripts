@@ -1,0 +1,23 @@
+#!/bin/bash
+
+##############################################################################
+#  
+#  isobash
+#  By Steven Saus 
+#  (c) 2022; licensed under the MIT license
+#
+#  Because I needed something to remember how to mount isos
+##############################################################################
+
+#get install directory
+export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+
+IsoFile=$(zenity --file-selection --file-filter=*.iso --title="Choose your ISO file to mount")
+MountDir=$(zenity --file-selection --directory --title="Where shall we mount it?")
+
+pkexec env DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY mount ${IsoFile} ${MountDir} -o loop
+
+# Pauses; leaves reminder to unmount whenever it's closed
+zenity --progress --title="Mounted ISO" --text="Mounted \n${IsoFile}\n at ${MountDir}" --pulsate --cancel-label="Click me to unmount"
+
+pkexec env DISPLAY=$DISPLAY XAUTHORITY=$XAUTHORITY umount "${MountDir}"
