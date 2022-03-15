@@ -40,7 +40,7 @@ fake_background (){
 }
 
 replace_video(){
-    $(which ffmpeg) -stream_loop -1 -re -i "${file_in}" -vcodec rawvideo -threads 0 -f v4l2 "${real_cam}"
+    $(which ffmpeg) -stream_loop -1 -re -i "${file_in}" -vcodec rawvideo -threads 0 -f v4l2 "${fake_cam}"
 }
 
 if [ -z "$1" ];then
@@ -59,7 +59,8 @@ gfc=$(get_fake_cameras)
 num_fakes=$(echo "${gfc}" | grep -c 'fake-cam')
 if [ $num_fakes -eq 0 ];then
     echo "modprobing v4l2 module..."
-    sudo modprobe v4l2loopback devices=1 exclusive_caps=1 video_nr=2 card_label="fake-cam"
+    #sudo modprobe v4l2loopback devices=1 exclusive_caps=1 video_nr=2 card_label="fake-cam"
+    sudo modprobe v4l2loopback devices=1 exclusive_caps=1 card_label="fake-cam"
 fi
 gfc=$(get_fake_cameras)
 num_fakes=$(echo "${gfc}" | grep -c ':')
