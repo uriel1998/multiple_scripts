@@ -89,3 +89,21 @@ for example, these three commands:
 `/usr/bin/python /usr/bin/dstat -c -C 0,1,total -d -s -n -y -r`  
 
 are *not* lumped together, but are treated as separate commands.
+
+#books_search
+
+#joplin_search
+
+#patootie
+
+  Patootie
+  Using YAD and toot to have a GUI for sending a quick toot (with possible
+  images, content warnings, etc)
+  YAD = https://sourceforge.net/projects/yad-dialog/
+  toot = https://toot.bezdomni.net/
+
+  Patootie uses the environment variable TOOTACCT to specify the tooting account
+  otherwise it uses whichever one is currently active in toot. 
+
+
+

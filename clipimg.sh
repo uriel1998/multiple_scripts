@@ -35,13 +35,13 @@
 ##############################################################################
 # Init
 ##############################################################################
-EmojiPath="/home/steven/images2/emojis/"
-ReactionPath="/home/steven/images2/all_reactions/"
+EmojiPath="/home/steven/Documents/images/emojis/"
+ReactionPath="/home/steven/Documents/images/all_reactions/"
 IconPath="/home/steven/.icons/"
 ClipartPath="/home/steven/documents/resources/"
 FD_FIND=$(which fdfind)
 TempSearchPath=""
-Emoji="true"
+Emoji="false"
 Reaction="true"
 Icon="false"
 Clipart="false"
@@ -159,10 +159,10 @@ build_search_items() {
 
     
     if [ "$CliOnly" == "true" ];then
-        SelectedImage=$(echo -e "$Choices" | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which Reaction?" --preview 'chafa {}'  | realpath -p )
+        SelectedImage=$(echo -e "$Choices" | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which Reaction?" --preview 'chafa {}'  | xargs realpath )
     else
         #use ROFI, not zenity 
-        SelectedImage=$(echo -e "$Choices" | rofi -i -dmenu -p "Which Reaction?" -theme DarkBlue | realpath -p)
+        SelectedImage=$(echo -e "$Choices" | rofi -i -dmenu -p "Which Reaction?" -theme DarkBlue | xargs realpath )
     fi
 
 
