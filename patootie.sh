@@ -44,15 +44,23 @@ if [ "${Need_Image}" == "TRUE" ];then
     else
         if [ -f /usr/bin/convert ];then
             SendImage=$(mktemp --suffix=.png)
-            /usr/bin/convert -resize 800x512\! "$IMAGE_FILE" "$SendImage" 
+            /usr/bin/convert -resize 800x512\! "$IMAGE_FILE" "$SendImage"
+        else
+            filename=$(basename -- "$IMAGE_FILE")
+            extension="${filename##*.}"
+            SendImage=$(mktemp --suffix=.${extension})
+            cp "${IMAGE_FILE}" "${SendImage}"
         fi
+        
         ALT_TEXT=$(yad --window-icon=musique --on-top --skip-taskbar --image-on-top --borders=5 --title "Choose your alt text" --image "${SendImage}" --form --separator="±" --item-separator="," --text-align=center --field="Alt text to use?:TXT" "I was too lazy to put alt text" --item-separator="," --separator="±")
+        if [ ! -z "$ALT_TEXT" ];then 
+            AltText=$(echo "${ALT_TEXT}" | sed -e 's/"/“/g' -e "s/'/’/g" -e 's/—/ -- /g' -e 's/ — / -- /g' -e 's/ - / -- /g'  -e 's/ – / -- /g' -e 's/ – / -- /g')
+        else
+            AltText=""
+        fi
     fi
 fi 
 
-if [ ! -z "$ALT_TEXT" ];then 
-    AltText=$(echo "${ALT_TEXT}" | sed -e 's/"/“/g' -e "s/'/’/g" -e 's/—/ -- /g' -e 's/ — / -- /g' -e 's/ - / -- /g'  -e 's/ – / -- /g' -e 's/ – / -- /g')
-fi
 
 if [ ! -z "$ContentWarning" ];then
     if [ -f "$SendImage" ];then
