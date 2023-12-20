@@ -51,13 +51,15 @@ if [ "${Need_Image}" == "TRUE" ];then
             SendImage=$(mktemp --suffix=.${extension})
             cp "${IMAGE_FILE}" "${SendImage}"
         fi
-        
         ALT_TEXT=$(yad --window-icon=musique --on-top --skip-taskbar --image-on-top --borders=5 --title "Choose your alt text" --image "${SendImage}" --form --separator="±" --item-separator="," --text-align=center --field="Alt text to use?:TXT" "I was too lazy to put alt text" --item-separator="," --separator="±")
         if [ ! -z "$ALT_TEXT" ];then 
             AltText=$(echo "${ALT_TEXT}" | sed -e 's/"/“/g' -e "s/'/’/g" -e 's/—/ -- /g' -e 's/ — / -- /g' -e 's/ - / -- /g'  -e 's/ – / -- /g' -e 's/ – / -- /g')
+            AltText=" --description ${AltText}"
         else
             AltText=""
         fi
+        # now adding the beginning part to the SendImage string for binary usage        
+        SendImage=" --media ${SendImage}"
     fi
 fi 
 
@@ -67,17 +69,24 @@ if [ ! -z "$ContentWarning" ];then
         #if there is an image, and it's a CW'd post, the image should be sensitive
         ContentWarning=$(echo "--sensitive -p \"${ContentWarning}\"")
     else
-        ContentWarning=$(echo "-p \"${Content Warning}\"")
+        ContentWarning=$(echo "-p \"${ContentWarning}\"")
     fi
 fi
     
 
 if [ -z "$TOOTACCT" ];then 
+    echo "hi"
     postme=$(printf "%s post \"%s\" %s %s --quiet" "$binary" "${TootText}" "${SendImage}" "${ContentWarning}")
-    eval ${postme}
+    echo "${postme}"
+    echo "$postme"
+    echo ${postme}
+    #eval "${postme}"
 else
-    postme=$(printf "%s post \"%s\" %s %s -u %s --quiet" "$binary" "${TootText}" "${SendImage}" "${ContentWarning}" "${TOOTACCT}")
-    eval ${postme}
+    
+
+    postme=$(printf "echo -e \"${TootText}\" | %s post %s %s %s -u %s --quiet" "$binary" "${SendImage}" "${AltText}" "${ContentWarning}" "${TOOTACCT}")
+    echo ${postme}
+    eval "${postme}"
 fi
 
 if [ -f "$SendImage" ];then
