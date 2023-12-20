@@ -15,6 +15,9 @@
 # Patootie uses the environment variable TOOTACCT to specify the tooting account
 # otherwise it uses whichever one is currently active in toot. 
 
+# TODO - Start with image select, drop?
+# move sections to functions so I can swap order
+
 binary=$(which toot)
 if [ ! -f "${binary}" ];then
     echo "Exiting -- toot binary is not on \$PATH" 1>&2
