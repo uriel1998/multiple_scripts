@@ -15,13 +15,23 @@
 # Patootie uses the environment variable TOOTACCT to specify the tooting account
 # otherwise it uses whichever one is currently active in toot. 
 
-# TODO - Start with image select, drop?
-# move sections to functions so I can swap order
+# If an argument is passed, it is assumed to be the image file to attach. 
+# TODO - test with spaces for this - do I need to mess with IFS here as well?
+
+Need_Image=""
+IMAGE_FILE=""
+
+
 
 binary=$(which toot)
 if [ ! -f "${binary}" ];then
     echo "Exiting -- toot binary is not on \$PATH" 1>&2
     exit 99
+fi
+
+if [ -f "${1}" ];then
+    IMAGE_FILE="${1}"
+    Need_Image="TRUE"
 fi
 
 ANSWER=$(yad --form --separator="±" --item-separator="," --columns=2 --title "patootie" \
@@ -37,11 +47,15 @@ if [ "$ContentWarning" == "none" ];then
     ContentWarning=""
 fi
 
-# to see if need to select image
-Need_Image=$(echo "$ANSWER" | awk -F '±' '{print $3}')
+if [ "$IMAGE_FILE" == "" ];then  # if there wasn't one by command line
+    # to see if need to select image
+    Need_Image=$(echo "$ANSWER" | awk -F '±' '{print $3}')
+fi
 
 if [ "${Need_Image}" == "TRUE" ];then 
-    IMAGE_FILE=$(yad --title "Select image to add" --width=500 --height=400 --file --file-filter "Graphic files | *.jpg *.png *.webp *.jpeg")
+    if [ "${IMAGE_FILE}" == "" ]; then # if there wasn't one by command line
+        IMAGE_FILE=$(yad --title "Select image to add" --width=500 --height=400 --file --file-filter "Graphic files | *.jpg *.png *.webp *.jpeg")
+    fi
     if [ ! -f "${IMAGE_FILE}" ];then
         SendImage=""
     else
