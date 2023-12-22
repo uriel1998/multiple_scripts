@@ -13,6 +13,20 @@ A simple script using zenity and pkexec to allow for interactive mounting of ISO
 
 Scripts for moving and manipulating video and pulse streams easily.  See https://ideatrash.net/2022/02/manipulating-audio-and-video-streams-for-streaming-on-linux.html
 
+# patootie.sh
+
+  Because sometimes you want a GUI *and* the speed of a command line, and just want to say something stupid on Mastodon without firing up a browser or Sengi or grabbing your phone, or or or...
+
+  Uses [YAD](https://sourceforge.net/projects/yad-dialog/) and [toot](https://toot.bezdomni.net/) to have a GUI for sending a quick toot (with possible
+  image attachments, content warnings, and alt text. Includes interactive image selector and *displaying* the image while you are presented with a dialogue box to enter alt text.
+  
+  Patootie uses the environment variable TOOTACCT to specify the tooting account otherwise it uses whichever one is currently active in toot. 
+  
+  You may specify the full path to an image file as the first (and only) command-line variable to "pre-load" the image attachment portion of the script.
+  
+![patootie first dialogue box](https://raw.githubusercontent.com/uriel1998/multiple_scripts/master/patootie_1.jpg)
+
+![patootie alt text dialogue box](https://raw.githubusercontent.com/uriel1998/multiple_scripts/master/patootie_2.jpg)
 
 ## yad-todo.sh
 
@@ -94,16 +108,7 @@ are *not* lumped together, but are treated as separate commands.
 
 #joplin_search
 
-#patootie
 
-  Patootie
-  Using YAD and toot to have a GUI for sending a quick toot (with possible
-  images, content warnings, etc)
-  YAD = https://sourceforge.net/projects/yad-dialog/
-  toot = https://toot.bezdomni.net/
-
-  Patootie uses the environment variable TOOTACCT to specify the tooting account
-  otherwise it uses whichever one is currently active in toot. 
 
 
 

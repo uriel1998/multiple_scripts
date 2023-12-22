@@ -16,7 +16,6 @@
 # otherwise it uses whichever one is currently active in toot. 
 
 # If an argument is passed, it is assumed to be the image file to attach. 
-# TODO - test with spaces for this - do I need to mess with IFS here as well?
 
 Need_Image=""
 IMAGE_FILE=""
