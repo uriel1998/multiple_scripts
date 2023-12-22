@@ -98,17 +98,15 @@ fi
     
 
 if [ -z "$TOOTACCT" ];then 
-    echo "hi"
-    postme=$(printf "%s post \"%s\" %s %s --quiet" "$binary" "${TootText}" "${SendImage}" "${ContentWarning}")
-    echo "${postme}"
-    echo "$postme"
-    echo ${postme}
-    #eval "${postme}"
+    postme=$(printf "echo -e \"${TootText}\" | %s post %s %s %s --quiet" "$binary" "${SendImage}" "${AltText}" "${ContentWarning}")
+    eval "${postme}"
+    if [ "$?" == "0" ];then 
+        notify-send "Toot sent"
+    else
+        notify-send "Error!"
+    fi
 else
-    
-
     postme=$(printf "echo -e \"${TootText}\" | %s post %s %s %s -u %s --quiet" "$binary" "${SendImage}" "${AltText}" "${ContentWarning}" "${TOOTACCT}")
-    echo ${postme}
     eval "${postme}"
     if [ "$?" == "0" ];then 
         notify-send "Toot sent"
