@@ -34,7 +34,7 @@ if [ -f "${1}" ];then
     Need_Image="TRUE"
 fi
 
-ANSWER=$(yad --form --separator="±" --item-separator="," --columns=2 --title "patootie" \
+ANSWER=$(yad --geometry=+200+200 --form --separator="±" --item-separator="," --columns=2 --title "patootie" \
 --field="What to toot?:TXT" "" \
 --field="ContentWarning:CBE" none,discrimination,bigot,uspol,medicine,violence,reproduction,healthcare,LGBTQIA,climate,SocialMedia \
 --field="Attachment?:CHK" \
@@ -42,6 +42,10 @@ ANSWER=$(yad --form --separator="±" --item-separator="," --columns=2 --title "p
 
 
 TootText=$(echo "${ANSWER}" | awk -F '±' '{print $1}' | sed -e 's/ "/ “/g' -e 's/" /” /g' -e 's/"\./”\./g' -e 's/"\,/”\,/g' -e 's/\."/\.”/g' -e 's/\,"/\,”/g' -e 's/"/“/g' -e "s/'/’/g" -e 's/ -- /—/g' -e 's/(/—/g' -e 's/)/—/g' -e 's/ — /—/g' -e 's/ - /—/g'  -e 's/ – /—/g' -e 's/ – /—/g')
+if [ "${TootText}" == "" ];then
+    echo "Nothing entered, exiting"
+    exit 99
+fi
 ContentWarning=$(echo "${ANSWER}" | awk -F '±' '{print $2}' | sed -e 's/ "/ “/g' -e 's/" /” /g' -e 's/"\./”\./g' -e 's/"\,/”\,/g' -e 's/\."/\.”/g' -e 's/\,"/\,”/g' -e 's/"/“/g' -e "s/'/’/g" -e 's/ -- /—/g' -e 's/(/—/g' -e 's/)/—/g' -e 's/ — /—/g' -e 's/ - /—/g'  -e 's/ – /—/g' -e 's/ – /—/g')
 if [ "$ContentWarning" == "none" ];then 
     ContentWarning=""
@@ -54,7 +58,7 @@ fi
 
 if [ "${Need_Image}" == "TRUE" ];then 
     if [ "${IMAGE_FILE}" == "" ]; then # if there wasn't one by command line
-        IMAGE_FILE=$(yad --title "Select image to add" --width=500 --height=400 --file --file-filter "Graphic files | *.jpg *.png *.webp *.jpeg")
+        IMAGE_FILE=$(yad --geometry=+200+200 --title "Select image to add" --width=500 --height=400 --file --file-filter "Graphic files | *.jpg *.png *.webp *.jpeg")
     fi
     if [ ! -f "${IMAGE_FILE}" ];then
         SendImage=""
@@ -68,7 +72,7 @@ if [ "${Need_Image}" == "TRUE" ];then
             SendImage=$(mktemp --suffix=.${extension})
             cp "${IMAGE_FILE}" "${SendImage}"
         fi
-        ALT_TEXT=$(yad --window-icon=musique --on-top --skip-taskbar --image-on-top --borders=5 --title "Choose your alt text" --image "${SendImage}" --form --separator="" --item-separator="," --text-align=center --field="Alt text to use?:TXT" "I was too lazy to put alt text" --item-separator="," --separator="")
+        ALT_TEXT=$(yad --geometry=+200+200 --window-icon=musique --on-top --skip-taskbar --image-on-top --borders=5 --title "Choose your alt text" --image "${SendImage}" --form --separator="" --item-separator="," --text-align=center --field="Alt text to use?:TXT" "I was too lazy to put alt text" --item-separator="," --separator="")
         echo "$ALT_TEXT"
         if [ ! -z "$ALT_TEXT" ];then 
             # parens changed here because otherwise eval chokes
@@ -107,6 +111,11 @@ else
     postme=$(printf "echo -e \"${TootText}\" | %s post %s %s %s -u %s --quiet" "$binary" "${SendImage}" "${AltText}" "${ContentWarning}" "${TOOTACCT}")
     echo ${postme}
     eval "${postme}"
+    if [ "$?" == "0" ];then 
+        notify-send "Toot sent"
+    else
+        notify-send "Error!"
+    fi
 fi
 
 if [ -f "$SendImage" ];then
