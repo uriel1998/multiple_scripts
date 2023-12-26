@@ -5,6 +5,10 @@ This is often a repository when I work on small ideas until they're big enough
 to deserve thier own repo and README.  This readme may very well be outdated 
 or inaccurate!  
 
+## convert_patreon_downloader_files.sh
+
+See [this post on my blog](https://ideatrash.net/2023/12/how-to-back-up-your-patreon-posts-and-photos-to-multiple-formats-automatically-using-linux-in-december-2023.html) for a full description of how to use this script.
+
 ## isobash
 
 A simple script using zenity and pkexec to allow for interactive mounting of ISO files with a GUI interface.
