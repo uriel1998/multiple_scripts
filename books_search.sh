@@ -45,7 +45,7 @@
 # use both so can use whatever backend, even without calibre at all.
 ##############################################################################
 
-
+SCRIPTDIR="$( cd "$(dirname "$0")" ; pwd -P )"
 # Books directory
 BOOKS_DIR="${HOME}/documents/Calibre Library/"
 EXIFTOOL=$(which exiftool)
@@ -58,6 +58,7 @@ CliOnly="true"
 CacheFile="$HOME/.cache/book_search_cache"
 CALIBRE_STRUCTURE="true"
 CALIBREDB="true"
+GUIOUTPUT="true"
 # So that I don't have to worry about the structure of the path too hard
 SLASHES=$(echo "$BOOKS_DIR" | grep -o '/' | wc -l)
 ((SLASHES++))
@@ -112,8 +113,10 @@ main() {
         fi
         
         NumFormats=$(calibredb list --search id:"${SelectedBook}" -f formats --for-machine 2>/dev/null | grep -c -e \"\/)
+        echo "$NumFormats"
         if [ $NumFormats -gt 1 ];then
-            book=$(calibredb list --search id:"${SelectedBook}" -f formats --for-machine 2>/dev/null | grep -e \"\/ | sed 's/\"\,$/"/' | xargs)
+            echo "HI ${SelectedBook}"
+            book=$(calibredb list --search id:"${SelectedBook}" -f formats --for-machine 2>/dev/null | grep -e \"\/ | sed 's/\"\,$/"/' | fzf | xargs)
         else
             book=$(calibredb list --search id:"${SelectedBook}" -f formats --for-machine 2>/dev/null | grep -e \"\/ | sed 's/\"\,$/"/' | xargs)
         fi
@@ -141,6 +144,9 @@ main() {
     fi
     
     if [ -n "$book" ]; then
+        if [ "${GUIOutput}" == "true" ];then
+            CliOnly="false"
+        fi
         if [ "$CliOnly" == "false" ];then
              xdg-open "${book}"
         else
@@ -193,7 +199,8 @@ display_help(){
     echo "# -r regenerate booklist (and run) "
     echo "# -e regenerate booklist (and exit) "
     echo "# -g use GUI (rofi) "
-    echo "# -f do NOT use Calibre's database"
+    echo "# -x use xdg-open for output (but fzf for selection) "
+    echo "# -f do NOT use Calibre's database "
     echo "# -m Use ebook metadata, not file structure"
     echo "# FAIR WARNING: PDF METADATA IS OFTEN BORKED BEYOND RECOGNITION!"
     echo "###################################################################"
@@ -221,7 +228,10 @@ fi
         -e) gen_list
             exit
             shift ;;
+        -x) GUIOutput="true"
+            shift ;;      
         -g) CliOnly="false"
+            GUIOutput="false"
             shift ;;      
         esac
     done    
