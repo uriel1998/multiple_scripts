@@ -39,9 +39,7 @@
 # # need check for multi-format
 # # preview window for cover and/or summary?
      #With Preview
-#SelectedFile=$(cat "$CacheFile" | fzf --no-hscroll -m --height 80% --border --ansi --no-bold --preview="$SCRIPTDIR/quite-intriguing-preview {}" | sed 's/ (/./g' | sed 's/)//g' | sed 's/:man:/:man -Pcat:/g' | awk -F ':' '{print $2 " " $1}'
-#
-#calibredb list -f title,authors | fzf +x -e -i --header-lines=2 --preview="notify-send {}"
+
 
 #  
 # use both so can use whatever backend, even without calibre at all.
@@ -49,7 +47,7 @@
 
 
 # Books directory
-BOOKS_DIR="/home/steven/documents/Calibre Library/"
+BOOKS_DIR="${HOME}/documents/Calibre Library/"
 EXIFTOOL=$(which exiftool)
 FD_FIND=$(which fdfind)
 EPY=$(which epy) #https://github.com/wustho/epy
@@ -102,28 +100,45 @@ gen_list (){
     
 }
 
-
-
 main() {
-
-    if [ "$REGEN" != "false" ];then
-        gen_list
-    fi
-    if [ ! -f $CacheFile ];then
-        gen_list
-    fi
-
-    if [ "$CliOnly" == "true" ];then
-        SelectedBook=$(cat $CacheFile | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which Book?" )
+    # using calibre db data
+    if [ "$CALIBREDB" != "false" ];then
+        if [ "$CliOnly" == "true" ];then
+            SelectedBook=$(calibredb list -f title,authors |  awk '/^[1-9]/' | fzf +x -e -i --no-hscroll -m --height 80% --border --ansi --no-bold --preview="$SCRIPTDIR/book_search_preview.sh {}"|awk '{print $1}')
+        else
+            #use ROFI, not zenity 
+            SelectedBook=$(calibredb list -f title,authors |  awk '/^[1-9]/' | rofi -i -dmenu -p "Which Book?" -theme DarkBlue |awk '{print $1}')
+        fi
+        
+        NumFormats=$(calibredb list --search id:"${SelectedBook}" -f formats --for-machine 2>/dev/null | grep -c -e \"\/)
+        if [ $NumFormats -gt 1 ];then
+            book=$(calibredb list --search id:"${SelectedBook}" -f formats --for-machine 2>/dev/null | grep -e \"\/ | sed 's/\"\,$/"/' | xargs)
+        else
+            book=$(calibredb list --search id:"${SelectedBook}" -f formats --for-machine 2>/dev/null | grep -e \"\/ | sed 's/\"\,$/"/' | xargs)
+        fi
+        type="${book##*.}"
+                
+        
     else
-        #use ROFI, not zenity 
-        SelectedBook=$(cat $CacheFile | rofi -i -dmenu -p "Which Book?" -theme DarkBlue)
+        if [ "$REGEN" != "false" ];then
+            gen_list
+        fi
+        if [ ! -f $CacheFile ];then
+            gen_list
+        fi
+
+        if [ "$CliOnly" == "true" ];then
+            SelectedBook=$(cat $CacheFile | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which Book?" )
+        else
+            #use ROFI, not zenity 
+            SelectedBook=$(cat $CacheFile | rofi -i -dmenu -p "Which Book?" -theme DarkBlue)
+        fi
+
+        #extra xargs to strip newlines and whitespace
+        book=$( echo "$SelectedBook" | awk -F '|' '{print $4}' | xargs)
+        type=$( echo "$SelectedBook" | awk -F '|' '{print $1}' | xargs)
     fi
-
-    #extra xargs to strip newlines and whitespace
-    book=$( echo "$SelectedBook" | awk -F '|' '{print $4}' | xargs)
-    type=$( echo "$SelectedBook" | awk -F '|' '{print $1}' | xargs)
-
+    
     if [ -n "$book" ]; then
         if [ "$CliOnly" == "false" ];then
              xdg-open "${book}"

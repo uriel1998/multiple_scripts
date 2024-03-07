@@ -21,9 +21,9 @@ if [ "$ID" -eq "$ID" ] 2>/dev/null
 then
     # install unhtml from pacakage manager
     if [ -f $(which unhtml) ];then 
-        calibredb show_metadata "${ID}" | unhtml 
+        calibredb show_metadata "${ID}" 2>/dev/null | unhtml 
     else
-        calibredb show_metadata "${ID}" 
+        calibredb show_metadata "${ID}" 2>/dev/null 
     fi
 else
     # xargs to trim whitespace
