@@ -57,6 +57,7 @@ REGEN="false"
 CliOnly="true"
 CacheFile="$HOME/.cache/book_search_cache"
 CALIBRE_STRUCTURE="true"
+CALIBREDB="true"
 # So that I don't have to worry about the structure of the path too hard
 SLASHES=$(echo "$BOOKS_DIR" | grep -o '/' | wc -l)
 ((SLASHES++))
@@ -192,17 +193,24 @@ display_help(){
     echo "# -r regenerate booklist (and run) "
     echo "# -e regenerate booklist (and exit) "
     echo "# -g use GUI (rofi) "
+    echo "# -f do NOT use Calibre's database"
     echo "# -m Use ebook metadata, not file structure"
     echo "# FAIR WARNING: PDF METADATA IS OFTEN BORKED BEYOND RECOGNITION!"
     echo "###################################################################"
 }
 
+# sanity check
+if [ ! -f $(which calibredb) ];then
+    CALIBREDB="false"
+fi
 
     # Read in variables
     
     while [ $# -gt 0 ]; do
     option="$1"
         case $option in
+        -f) CALIBREDB="false"
+            shift ;;
         -m) CALIBRE_STRUCTURE="false"
             shift ;;      
         -h) display_help
