@@ -27,6 +27,24 @@
 # You can also regenerate it immediately before a run by using the -r switch
 #
 # Use -m to utilize ebook metadata instead of the file structure mentioned above.
+#
+# add in subject from exiftool (may need to add cpan install Activity::Zip (I think?) for tags 
+#
+#
+# Why wasn't I using this??? 
+# calibredb list -f authors,formats,cover,tags,series,series_index,title --separator §
+# id is first row, so can run multiple times to attach id to each of these. Or maybe feed into 
+# memory dynamically for fzf? That's probably better, innit?
+# calibredb list -f authors,formats,cover,tags,series,series_index,title --separator §
+# # need check for multi-format
+# # preview window for cover and/or summary?
+     #With Preview
+#SelectedFile=$(cat "$CacheFile" | fzf --no-hscroll -m --height 80% --border --ansi --no-bold --preview="$SCRIPTDIR/quite-intriguing-preview {}" | sed 's/ (/./g' | sed 's/)//g' | sed 's/:man:/:man -Pcat:/g' | awk -F ':' '{print $2 " " $1}'
+#
+#calibredb list -f title,authors | fzf +x -e -i --header-lines=2 --preview="notify-send {}"
+
+#  
+# use both so can use whatever backend, even without calibre at all.
 ##############################################################################
 
 
