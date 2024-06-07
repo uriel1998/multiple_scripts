@@ -1,10 +1,6 @@
 #!/usr/bin/env bash
 
-# TO SEARCH IN EPUB 
-# zipgrep -ihw -C2 STRING FILE | unhtml
-#
-# Can multi-tag from fzf!  Search multiple books for a string!
-#
+
 ##############################################################################
 #  
 #  books_search.sh 
@@ -115,12 +111,7 @@ main() {
             #use ROFI, not zenity 
             SelectedBook=$(calibredb list -f title,authors |  awk '/^[1-9]/' | rofi -i -dmenu -p "Which Book?" -theme DarkBlue |awk '{print $1}')
         fi
-        # TODO - handle multiple selections here
-        # TODO - strip out ROFI; make cli only
-        # TODO - redo handling opening of books
-        # TODO - searching text of ebooks
-        echo "${SelectedBook}"
-        exit
+        
         NumFormats=$(calibredb list --search id:"${SelectedBook}" -f formats --for-machine 2>/dev/null | grep -c -e \"\/)
         echo "$NumFormats"
         if [ $NumFormats -gt 1 ];then
@@ -151,7 +142,7 @@ main() {
         book=$( echo "$SelectedBook" | awk -F '|' '{print $4}' | xargs)
         type=$( echo "$SelectedBook" | awk -F '|' '{print $1}' | xargs)
     fi
-
+    
     if [ -n "$book" ]; then
         if [ "${GUIOutput}" == "true" ];then
             CliOnly="false"
