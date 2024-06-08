@@ -1,4 +1,4 @@
- #!/bin/bash
+#!/bin/bash
 
 ##############################################################################
 #
@@ -53,7 +53,7 @@ process_a_path () {
     IFS=/ read -a arr <<< "${1}"
     i=0
     while [ $i -lt "${#arr[@]}" ]; do 
-        arr[$i]= $(printf '%s\n' "${arr[$i]}" | iconv -t ASCII//TRANSLIT - | inline-detox)    
+        arr[$i]=$(printf '%s\n' "${arr[$i]}" | iconv -t ASCII//TRANSLIT - | inline-detox)    
         let i=i+1
     done
     # stitch it back together
@@ -96,10 +96,9 @@ process_a_path () {
             ;;
         -h|--help) display_help
             exit
-            shift 
             ;;      
         # if it's none of these, it should be source, then destination
-        *)  if [ -z $SOURCE ];then
+        *)  if [ -z "$SOURCE" ];then
                 #if no source, set source
                 if [ -d "${1}" ];then
                     SOURCE_TYPE="DIR"
@@ -116,7 +115,7 @@ process_a_path () {
                     fi
                 fi
             else
-                if [ -z $DEST ];then
+                if [ -z "$DEST" ];then
                     #if no source, set source
                     if [ -d "${1}" ];then
                         DEST_TYPE="DIR"
@@ -126,8 +125,6 @@ process_a_path () {
                         if [ -f "${1}" ];then
                             loud "Specified file destination exists and is not a directory, exiting."
                             exit 98
-                            DEST_TYPE="EMPTY"
-                            shift
                         fi
                     fi
                 else
