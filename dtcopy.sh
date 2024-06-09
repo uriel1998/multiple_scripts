@@ -91,7 +91,9 @@ process_a_path () {
             # with a BASE of /home/steven/music
             # would result in the path /album/artist/file being copied
             # as the path of the copied file
+            shift
             BASE="${1}"
+            echo "BASE IS ${BASE}"
             shift
             ;;
         -h|--help) display_help
