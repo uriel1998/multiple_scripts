@@ -52,15 +52,21 @@ process_a_path () {
     # take in the string, read it into array
     IFS=/ read -a arr <<< "${1}"
     i=0
+    seglen=0
     while [ $i -lt "${#arr[@]}" ]; do 
-        arr[$i]=$(printf '%s\n' "${arr[$i]}" | iconv -t ASCII//TRANSLIT - | inline-detox)    
+        seglen="${#arr[$i]}"
+        arr[$i]=$(printf '%s\n' "${arr[$i]}" | iconv -t ASCII//TRANSLIT - | inline-detox)  
+        if [ ${#arr[$i]} -eq 0 ];then 
+            arr[$i]=$(printf '%*s' "$seglen" | tr ' ' "_")
+        fi
         let i=i+1
     done
     # stitch it back together
     processed_path=$(printf '/%s' "${arr[@]}")
     # remove EXTRA leading slash from printf above
     processed_path="${processed_path:1}"
-    #emit our processed path
+    # remove condition where there's an empty portion of PATH
+    processed_path=$(printf "%s" "${processed_path}" | sed 's@\/\/@\/_\/@g')
     echo "${processed_path}"
 }
     
