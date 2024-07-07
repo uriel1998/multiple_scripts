@@ -10,7 +10,8 @@
 #
 ##############################################################################
 
-  
+# DOES NOT PROPERLY PARSE FIRST DIR?  
+
 
 # Some choices:
 # If source is a DIR and dest is a DIR, then copy all files in SOURCE to DEST
@@ -161,7 +162,7 @@ process_a_path () {
     esac
 
     # Processing single input file   
-    if [ "$SOURCE_TYPE"="FILE" ];then
+    if [ "$SOURCE_TYPE" = "FILE" ];then
         # remove base
         NOBASE_SOURCE=""
         NOBASE_SOURCE=${SOURCE#"$BASE"}
@@ -186,7 +187,7 @@ process_a_path () {
 
     
     #Processing input directory of files   
-    if [ "$SOURCE_TYPE"="DIR" ];then
+    if [ "$SOURCE_TYPE" = "DIR" ];then
         # get all filenames in that directory (recursively) into array        
         in_array=()
         while IFS=  read -r -d $'\0'; do
