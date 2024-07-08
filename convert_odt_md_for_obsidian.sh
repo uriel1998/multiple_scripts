@@ -17,6 +17,29 @@ function loud() {
     fi
 }
 
+
+process_a_path () {
+    # take in the string, read it into array
+    IFS=/ read -a arr <<< "${1}"
+    i=0
+    seglen=0
+    while [ $i -lt "${#arr[@]}" ]; do 
+        seglen="${#arr[$i]}"
+        arr[$i]=$(printf '%s\n' "${arr[$i]}" | iconv -t ASCII//TRANSLIT - | inline-detox)  
+        if [ ${#arr[$i]} -eq 0 ];then 
+            arr[$i]=$(printf '%*s' "$seglen" | tr ' ' "%20")
+        fi
+        let i=i+1
+    done
+    # stitch it back together
+    processed_path=$(printf '/%s' "${arr[@]}")
+    # remove EXTRA leading slash from printf above
+    processed_path="${processed_path:1}"
+    # remove condition where there's an empty portion of PATH
+    processed_path=$(printf "%s" "${processed_path}" | sed 's@\/\/@\/_\/@g')
+    echo "${processed_path}"
+}
+
 # STARTUP
 # get start path & archive directory
 
@@ -31,6 +54,10 @@ if [ ! -d "${2}" ];then
     mkdir -p "${2}"
 fi
 ARCDIR="${2}"
+ESCAPED_ARCDIR=$(printf '%s' "$ARCDIR" | sed 's/\ /%20/g')
+echo "${ESCAPED_ARCDIR}"
+ 
+
     
 # find odt files
 odtfiles=$(find "${INDIR}" -name '*.odt' -printf '"%p"\n' | xargs -I {} realpath {})
@@ -44,21 +71,37 @@ while read -r line; do
     extension="${line##*.}"
     file_and_path="${line%.*}"
     outfile_path=$(printf "%s.md" "${file_and_path}")
-
-
-    echo "${line}"
-    echo "${filename}"
-    echo "${filename_only}"
-    echo "#${file_and_path}"
-    echo "${extension}"
-    echo "${filedir}"
-    echo "${outfile_path}"
-    echo "####" 
-    
-        pandoc -f odt -t markdown "${file_and_path}.${extension}" -o "${outfile_path}"
-        # if successful copy odt file to archive directory
-        mv "${line}" "${ARCDIR}"
-        printf "\n[Original File:](file://%s/%s)\n" "${ARCDIR}" "${filename}" >> "${file_and_path}.md"
-
+    pandoc -f odt -t markdown "${file_and_path}.${extension}" -o "${outfile_path}"
+    # if successful copy odt file to archive directory
+    NOBASE_SOURCE=${1#"file://"}
+    bob=$(process_a_path "${filename}")
+    echo "${ARCDIR}/${bob}"        
+    mv "${line}" "${ARCDIR}/${bob}"
+    printf "\n[Original File:](file://%s%s)\n" "${ESCAPED_ARCDIR}" "${bob}" >> "${file_and_path}.md"
 done < <(echo "${odtfiles}")
+
+
+# this does not work seamlessly
+# find rtf files
+rtffiles=$(find "${INDIR}" -name '*.rtf' -printf '"%p"\n' | xargs -I {} realpath {})
+# loop
+while read -r line; do
+    # split to path, filename, extension
+    # convert to markdown with pandoc
+    filedir=$(dirname "${line}")
+    filename=$(basename "${line}")
+    filename_only="${filename%.*}"
+    extension="${line##*.}"
+    file_and_path="${line%.*}"
+    outfile_path=$(printf "%s.md" "${file_and_path}")
+    echo "$line"
+    echo "$file_and_path.$extension"
+    unrtf --html "${file_and_path}.${extension}" | pandoc -f html -t markdown -o "${outfile_path}"
+    # if successful copy odt file to archive directory
+    NOBASE_SOURCE=${1#"file://"}
+    bob=$(process_a_path "${filename}")
+    echo "${ARCDIR}/${bob}"        
+    mv "${line}" "${ARCDIR}/${bob}"
+    printf "\n[Original File:](file://%s%s)\n" "${ESCAPED_ARCDIR}" "${bob}" >> "${file_and_path}.md"
+done < <(echo "${rtffiles}")
 
