@@ -81,7 +81,7 @@ while read -r line; do
 done < <(echo "${odtfiles}")
 
 
-# this does not work seamlessly
+# rtf is done through using UNRTF -- pandoc by itself will sometimes choke!
 # find rtf files
 rtffiles=$(find "${INDIR}" -name '*.rtf' -printf '"%p"\n' | xargs -I {} realpath {})
 # loop
