@@ -3,23 +3,24 @@
 
 # This is a simple thing to ease conversion to Obsidian by making ODT files
 # and RTF files into markdown and moving the original files to an archive directory.
+# Requires pandoc and unrtf
 
 # usage: bash ./convert_odt_md_for_obsidian.sh /full/path/to/vault /full/path/to/archive/directory
 
 # ARCHIVE DIRECTORY MUST BE OUTSIDE OF YOUR VAULT TO AVOID LOOPING
+
+# Features: 
 # Checks for and renames (by adding # to the end of the filename) if existing 
 # markdown or ODT/RTF file exists. That said, backup before use! 
 # Run through your vault directory, find ODT files, convert to md
 # Do the same for RTF
 # copy OG file to an archive directory
+# temporarily changes dir to the INDIR so converted embedded images, etc are 
+# placed correctly
 # create file:// link in each md note to OG file
 
 #  (c) Steven Saus 2024
 #  Licensed under the MIT license
-
-# FRAK - it needs to chdir to the source directory so the extracted jpgs etc
-# are in the right place
-
 
 INDIR=""
 ARCDIR=""
@@ -70,7 +71,9 @@ fi
 ARCDIR="${2}"
 ESCAPED_ARCDIR=$(printf '%s' "$ARCDIR" | sed 's/\ /%20/g')
 loud "Archive Dir Will Be: ${ESCAPED_ARCDIR}"
- 
+STARTDIR="${PWD}"
+loud "Processing ${INDIR}"
+cd "${INDIR}" 
 
     
 # find odt files
@@ -92,7 +95,7 @@ while read -r line; do
             [[ -f "${outfile_path}" ]] || break
             outfile_path=$(printf "%s%s.md" "${file_and_path}" ${i})
         done
-        loud "${outfile_path}"        
+        loud "Converting to ${outfile_path}"        
         pandoc -f odt -t markdown "${file_and_path}.${extension}" -o "${outfile_path}"
         # if successful copy odt file to archive directory
         NOBASE_SOURCE=${1#"file://"}
@@ -103,7 +106,7 @@ while read -r line; do
             [[ -f "${ARCDIR}/${bob}" ]] || break
             bob=$(process_a_path "${filename_only}$i.${extension}")
         done
-        echo "${ARCDIR}/${bob}"        
+        loud "Moving original to ${ARCDIR}/${bob}"        
         mv "${line}" "${ARCDIR}/${bob}"
         printf "\n[Original File:](file://%s%s)\n" "${ESCAPED_ARCDIR}" "${bob}" >> "${file_and_path}.md"
     fi
@@ -130,7 +133,7 @@ while read -r line; do
             [[ -f "${outfile_path}" ]] || break
             outfile_path=$(printf "%s%s.md" "${file_and_path}" ${i})
         done
-        loud "${outfile_path}"
+        loud "Converting to ${outfile_path}"        
         unrtf --html "${file_and_path}.${extension}" | pandoc -f html -t markdown -o "${outfile_path}"
         # if successful copy odt file to archive directory
         NOBASE_SOURCE=${1#"file://"}
@@ -141,9 +144,10 @@ while read -r line; do
             [[ -f "${ARCDIR}/${bob}" ]] || break
             bob=$(process_a_path "${filename_only}$i.${extension}")
         done
-        loud "${ARCDIR}/${bob}"        
+        loud "Moving original to ${ARCDIR}/${bob}"        
         mv "${line}" "${ARCDIR}/${bob}"
         printf "\n[Original File:](file://%s%s)\n" "${ESCAPED_ARCDIR}" "${bob}" >> "${file_and_path}.md"
     fi
 done < <(echo "${rtffiles}")
 
+cd "${STARTDIR}"
