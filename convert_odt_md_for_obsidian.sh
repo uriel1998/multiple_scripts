@@ -3,13 +3,23 @@
 
 # This is a simple thing to ease conversion to Obsidian by making ODT files
 # and RTF files into markdown and moving the original files to an archive directory.
+
+# usage: bash ./convert_odt_md_for_obsidian.sh /full/path/to/vault /full/path/to/archive/directory
+
 # ARCHIVE DIRECTORY MUST BE OUTSIDE OF YOUR VAULT TO AVOID LOOPING
-# Absolutely NO repeat NO checking for clobbering is done. Backup before use! 
+# Checks for and renames (by adding # to the end of the filename) if existing 
+# markdown or ODT/RTF file exists. That said, backup before use! 
 # Run through your vault directory, find ODT files, convert to md
 # Do the same for RTF
 # copy OG file to an archive directory
 # create file:// link in each md note to OG file
-# usage: bash ./convert_odt_md_for_obsidian.sh /full/path/to/vault /full/path/to/archive/directory
+
+#  (c) Steven Saus 2024
+#  Licensed under the MIT license
+
+# FRAK - it needs to chdir to the source directory so the extracted jpgs etc
+# are in the right place
+
 
 INDIR=""
 ARCDIR=""
