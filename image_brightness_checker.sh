@@ -13,7 +13,7 @@ fi
 cd "${DIRECTORY}"
 imgfiles=$(fdfind -a -0 -e jpg -e jpeg -e png | xargs --null -I {} realpath {} )
 
-
+rm ~/imagebright.csv
 
 while read -r line; do
     # echo "${line}"
@@ -25,7 +25,7 @@ while read -r line; do
         ImageFile+=("${line}")
         ImageBright+=("${brightcolor}")
         printf "%60s%10s\n" "${filename}" "${brightcolor}"
-        printf "%s,%s\n" "${filename}" "${brightcolor}" > ~/imagebright.csv
+        printf "%s,%s\n" "${line}" "${brightcolor}" >> ~/imagebright.csv
         IFS=OIFS
     fi
 done < <(echo "${imgfiles}")
