@@ -13,6 +13,11 @@ See [this post on my blog](https://ideatrash.net/2023/12/how-to-back-up-your-pat
 
 A simple script using zenity and pkexec to allow for interactive mounting of ISO files with a GUI interface.
 
+## aptlist
+
+Because sometimes I want to see what packages are installed or available quickly.  Use -i to have it auto-sub in [installed] to the fzf search string. Also uses dpkg search to list what the package installs.
+
+
 ## video-fzf-config and pulse-fzf-autoconf
 
 Scripts for moving and manipulating video and pulse streams easily.  See https://ideatrash.net/2022/02/manipulating-audio-and-video-streams-for-streaming-on-linux.html

@@ -1,0 +1,16 @@
+#!/bin/bash
+
+export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+ONLY_INSTALLED=0
+QUERY=""
+
+if [[ "$@" =~ "-i" ]]; then
+    ONLY_INSTALLED=1
+    QUERY=$(echo "${@}" | sed 's/-i/[installed]/')
+else
+    QUERY="${@}"
+fi
+
+apt list 2>/dev/null | fzf -i -m -q "${QUERY}" --preview="${SCRIPT_DIR}/aptlist-preview.sh {}"
+
+
