@@ -35,8 +35,8 @@ if [ -f ! $(which dragon) ];then
     echo " https://github.com/mwh/dragon "
     exit 99
 fi
-
-bob=$(dragon --print-path --target -x)
+dragon_bin=$(which dragon)
+bob=$(${dragon_bin} --print-path --target -x)
 
 # replace \/home\/steven\/vault\/ in the line below to the directory where you symlinked
 # all of your vaults to.
@@ -52,7 +52,7 @@ if [ -f "${bob2}" ];then
         echo "Adding markdown extension"
         bob2=$(echo -e "${bob2}.md")
     fi
-    dragon "${bob2}"
+    ${dragon_bin} "${bob2}"
 else
     echo "This is not a file; you cannot share a directory."
     exit 98
