@@ -31,6 +31,19 @@
 
 
 # sed 's|obsidian:\/\/open?vault=|\/home\/steven\/vault\/|g' | sed -e 's/%2F/\//g' -e 's/%20/ /g'
+LOUD=0
+if [ "$1" == "--verbose" ];then
+    shift
+    LOUD=1
+fi
+
+function loud() {
+    if [ $LOUD -eq 1 ];then
+        echo "$@"
+    fi
+}
+
+
 
 if [ -f ! $(which dragon) ];then
     echo "This requires dragon to work."
@@ -47,14 +60,15 @@ bob2=$(echo -e "${bob}" | sed 's|obsidian:\/\/open?vault=|\/home\/steven\/vault\
 if [ -f "${bob2}" ];then 
     bob3=$(basename "${bob2}")
     if [[ "${bob3}" == *.* ]]; then
-        echo "Filename '$filename' has an extension."
+        loud "Filename '$filename' has an extension."
     else
         # Obsidian does not export md extension, even though it's there, for md files.
         # :: shrug ::
-        echo "Adding markdown extension"
+        loud "Adding markdown extension"
         bob2=$(echo -e "${bob2}.md")
     fi
-    ${dragon_bin} "${bob2}"
+    echo -e "${bob2}"
+    ${dragon_bin} "${bob2}" -x
 else
     echo "This is not a file; you cannot share a directory."
     exit 98
