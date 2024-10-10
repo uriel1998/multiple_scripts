@@ -26,6 +26,8 @@
 # thus allowing for consistent rewriting even though they live in very different
 # parts of my file structure. See below for the string to modify for your system.
 
+# Use the Shell Commands plugin to invoke, optionally use Commander plugin to add 
+# an icon to the ribbon or somesuch.
 
 
 # sed 's|obsidian:\/\/open?vault=|\/home\/steven\/vault\/|g' | sed -e 's/%2F/\//g' -e 's/%20/ /g'

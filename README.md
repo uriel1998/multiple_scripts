@@ -5,6 +5,39 @@ This is often a repository when I work on small ideas until they're big enough
 to deserve thier own repo and README.  This readme may very well be outdated 
 or inaccurate!  
 
+## drag-out-of-obsidian.sh
+
+ There are a lot of ways to get content *into* Obsidian, but sometimes I want 
+ to pull an image or file and drag-and-drop it into Element, Discord, whatever. 
+ However, that reveals the Obsidian URI to some (all?) applications, not the 
+ filename, making the operation fail. This is a workaround.
+ 
+ This uses [Dragon](https://github.com/mwh/dragon) to provide the drag and drop
+ target.
+
+ Usage - call `drag-out-of-obsidian.sh` (using the Shell Commands plugin), then 
+ drag whatever from Obsidian to the target. It will then process the provided Obsidian 
+ URL, provide the file name to a SECOND instance of Dragon (after making sure it 
+ is escaped to deal with spaces), which will give you a target to drop on 
+ your other application.
+
+ The root of my vaults are symlinked into ${HOME}/vault, e.g.
+
+   /vault/Brain
+   /vault/DnD5e
+   /vault/Writing
+ 
+ thus allowing for consistent rewriting even though they live in very different
+ parts of my file structure. You will want to replace the `\/home\/steven\/vault\/` 
+ with the *equally escaped* directory that you moved or symlinked all your vaults to.
+ 
+`sed 's|obsidian:\/\/open?vault=|\/home\/steven\/vault\/|g' | sed -e 's/%2F/\//g' -e 's/%20/ /g'`
+
+ Use the Shell Commands plugin to invoke, optionally use Commander plugin to add 
+ an icon to the ribbon or somesuch.
+
+
+
 ## convert_patreon_downloader_files.sh
 
 See [this post on my blog](https://ideatrash.net/2023/12/how-to-back-up-your-patreon-posts-and-photos-to-multiple-formats-automatically-using-linux-in-december-2023.html) for a full description of how to use this script.
