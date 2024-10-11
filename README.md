@@ -45,7 +45,7 @@ I can drag to Thunar, not Discord... but this script fixes it.
 ![Example 1](https://i.imgur.com/YPNV1Xd.gif "What it looks like")
 
 I can't drag to upload to imgur... but this script fixes it.
-![Example 2](https://i.imgur.com/X96Xmy6.gif "What it looks like")
+![Example 2](https://i.imgur.com/uxWb9sM.gif "What it looks like")
 
 
 ## convert_patreon_downloader_files.sh
