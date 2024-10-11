@@ -45,7 +45,7 @@ function loud() {
 
 
 
-if [ -f ! $(which dragon) ];then
+if [ ! -f $(which dragon) ];then
     echo "This requires dragon to work."
     echo " https://github.com/mwh/dragon "
     exit 99

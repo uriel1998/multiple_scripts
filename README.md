@@ -36,6 +36,8 @@ or inaccurate!
  Use the Shell Commands plugin to invoke, optionally use Commander plugin to add 
  an icon to the ribbon or somesuch.
 
+ You *may* need to add the $PATH variables to Shell Commands, depending on where 
+ you have the dragon binary located.
 
 
 ## convert_patreon_downloader_files.sh
