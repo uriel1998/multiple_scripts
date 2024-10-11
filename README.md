@@ -39,6 +39,10 @@ or inaccurate!
  You *may* need to add the $PATH variables to Shell Commands, depending on where 
  you have the dragon binary located.
 
+Examples: 
+![Example 1](https://i.imgur.com/YPNV1Xd.gif "What it looks like")
+![Example 2](https://i.imgur.com/X96Xmy6.gif "What it looks like")
+
 
 ## convert_patreon_downloader_files.sh
 
