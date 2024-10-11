@@ -40,7 +40,11 @@ or inaccurate!
  you have the dragon binary located.
 
 Examples: 
+I can drag to Thunar, not Discord... but this script fixes it.
+
 ![Example 1](https://i.imgur.com/YPNV1Xd.gif "What it looks like")
+
+I can't drag to upload to imgur... but this script fixes it.
 ![Example 2](https://i.imgur.com/X96Xmy6.gif "What it looks like")
 
 
