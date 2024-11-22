@@ -19,25 +19,30 @@
 
 Need_Image=""
 IMAGE_FILE=""
-
+TOOTVAR=TRUE
+BSKYVAR=TRUE
 
 
 binary=$(which toot)
 if [ ! -f "${binary}" ];then
-    echo "Exiting -- toot binary is not on \$PATH" 1>&2
-    exit 99
+    TOOTVAR=FALSE
 fi
+
+
+bsky_binary=$(which bsky)
+if [ ! -f "${binary}" ];then
+    BSKYVAR=FALSE
+fi
+
 
 if [ -f "${1}" ];then
     IMAGE_FILE="${1}"
     Need_Image="TRUE"
 fi
 
-ANSWER=$(yad --geometry=+200+200 --form --separator="±" --item-separator="," --columns=2 --title "patootie" \
---field="What to toot?:TXT" "" \
---field="ContentWarning:CBE" none,discrimination,bigot,uspol,medicine,violence,reproduction,healthcare,LGBTQIA,climate,SocialMedia \
---field="Attachment?:CHK" \
---item-separator="," --button=Cancel:99 --button=Post:0)
+ANSWER=$( 
+
+yad --geometry=+200+200 --form --separator="±" --item-separator="," --on-top --title "patootie" --field="What to post?:TXT" "" --field="ContentWarning:CBE" none,discrimination,bigot,uspol,medicine,violence,reproduction,healthcare,LGBTQIA,climate,SocialMedia -columns=2  --field="Attachment?":CHK "FALSE" --field="masto":CHK "$TOOTVAR" --field="bsky":CHK "$BSKYVAR" --item-separator="," --button=Cancel:99 --button=Post:0)
 
 
 TootText=$(echo "${ANSWER}" | awk -F '±' '{print $1}' | sed -e 's/ "/ “/g' -e 's/" /” /g' -e 's/"\./”\./g' -e 's/"\,/”\,/g' -e 's/\."/\.”/g' -e 's/\,"/\,”/g' -e 's/"/“/g' -e "s/'/’/g" -e 's/ -- /—/g' -e 's/(/—/g' -e 's/)/—/g' -e 's/ — /—/g' -e 's/ - /—/g'  -e 's/ – /—/g' -e 's/ – /—/g')
@@ -50,6 +55,9 @@ if [ "$ContentWarning" == "none" ];then
     ContentWarning=""
 fi
 
+TOOTVAR=$(echo "${ANSWER}" | awk -F '±' '{print $4}' )
+BSKYVAR=$(echo "${ANSWER}" | awk -F '±' '{print $5}' )
+
 if [ "$IMAGE_FILE" == "" ];then  # if there wasn't one by command line
     # to see if need to select image
     Need_Image=$(echo "$ANSWER" | awk -F '±' '{print $3}')
@@ -57,10 +65,11 @@ fi
 
 if [ "${Need_Image}" == "TRUE" ];then 
     if [ "${IMAGE_FILE}" == "" ]; then # if there wasn't one by command line
-        IMAGE_FILE=$(yad --geometry=+200+200 --title "Select image to add" --width=500 --height=400 --file --file-filter "Graphic files | *.jpg *.png *.webp *.jpeg")
+        IMAGE_FILE=$(yad --geometry=+200+200  --on-top --title "Select image to add" --width=500 --height=400 --file --file-filter "Graphic files | *.jpg *.png *.webp *.jpeg")
     fi
     if [ ! -f "${IMAGE_FILE}" ];then
         SendImage=""
+        BSendImage=""
     else
         if [ -f /usr/bin/convert ];then
             SendImage=$(mktemp --suffix=.png)
@@ -76,13 +85,17 @@ if [ "${Need_Image}" == "TRUE" ];then
         if [ ! -z "$ALT_TEXT" ];then 
             # parens changed here because otherwise eval chokes
             AltText=$(echo "${ALT_TEXT}" | sed -e 's/ "/ “/g' -e 's/" /” /g' -e 's/"\./”\./g' -e 's/"\,/”\,/g' -e 's/\."/\.”/g' -e 's/\,"/\,”/g' -e 's/"/“/g' -e "s/'/’/g" -e 's/ -- /—/g' -e 's/(/—/g' -e 's/)/—/g' -e 's/ — /—/g' -e 's/ - /—/g'  -e 's/ – /—/g' -e 's/ – /—/g')
+            AltBsky=" --alt \"${AltText}\""
             AltText=" --description \"${AltText}\""
         else
             AltText=""
+            AltBsky=""
         fi
-        echo "$AltText"
+        # echo "$AltText"
         # now adding the beginning part to the SendImage string for binary usage        
+        BSendImage=" --image ${SendImage}"
         SendImage=" --media ${SendImage}"
+        
     fi
 fi 
 
@@ -95,26 +108,40 @@ if [ ! -z "$ContentWarning" ];then
         ContentWarning=$(echo "-p \"${ContentWarning}\"")
     fi
 fi
-    
 
-if [ -z "$TOOTACCT" ];then 
-    postme=$(printf "echo -e \"${TootText}\" | %s post %s %s %s --quiet" "$binary" "${SendImage}" "${AltText}" "${ContentWarning}")
+
+
+if [ "$BSKYVAR" == "TRUE" ];then
+
+    postme=$(printf "%s post --text \"%s\" %s %s" "${bsky_binary}" "${TootText}" "${BSendImage}" "${AltBsky}")
     eval "${postme}"
     if [ "$?" == "0" ];then 
-        notify-send "Toot sent"
+        notify-send "Post sent"
     else
         notify-send "Error!"
-    fi
-else
-    postme=$(printf "echo -e \"${TootText}\" | %s post %s %s %s -u %s --quiet" "$binary" "${SendImage}" "${AltText}" "${ContentWarning}" "${TOOTACCT}")
-    eval "${postme}"
-    if [ "$?" == "0" ];then 
-        notify-send "Toot sent"
-    else
-        notify-send "Error!"
-    fi
+    fi    
+
 fi
 
+if [ "$TOOTVAR"  == "TRUE" ];then
+    if [ -z "$TOOTACCT" ];then 
+            postme=$(printf "%s post --text \"%s\" %s %s" "${binary}" "${TootText}" "${SendImage}" "${AltText}" "${ContentWarning}")
+        eval "${postme}"
+        if [ "$?" == "0" ];then 
+            notify-send "Toot sent"
+        else
+            notify-send "Error!"
+        fi
+    else
+        postme=$(printf "echo -e \"${TootText}\" | %s post %s %s %s -u %s" "$binary" "${SendImage}" "${AltText}" "${ContentWarning}" "${TOOTACCT}")
+        eval "${postme}"
+        if [ "$?" == "0" ];then 
+            notify-send "Toot sent"
+        else
+            notify-send "Error!"
+        fi
+    fi
+fi
 if [ -f "$SendImage" ];then
     rm -rf "${SendImage}"
 fi

@@ -67,10 +67,11 @@ Scripts for moving and manipulating video and pulse streams easily.  See https:/
 
 # patootie.sh
 
-  Because sometimes you want a GUI *and* the speed of a command line, and just want to say something stupid on Mastodon without firing up a browser or Sengi or grabbing your phone, or or or...
+  Because sometimes you want a GUI *and* the speed of a command line, and just want to say something stupid on Mastodon/Bluesky without firing up a browser or Sengi or grabbing your phone, or or or...
 
-  Uses [YAD](https://sourceforge.net/projects/yad-dialog/) and [toot](https://toot.bezdomni.net/) to have a GUI for sending a quick toot (with possible
-  image attachments, content warnings, and alt text. Includes interactive image selector and *displaying* the image while you are presented with a dialogue box to enter alt text.
+  Uses [YAD](https://sourceforge.net/projects/yad-dialog/) and [toot](https://toot.bezdomni.net/) [bsky-sh-cli](https://github.com/bills-appworks/bsky-sh-cli) to have a GUI for sending a quick post (with possible image attachments, content warnings, and alt text. Includes interactive image selector and *displaying* the image while you are presented with a dialogue box to enter alt text.
+  
+  You must set up both `toot` and `bsky-sh-cli` independently to use this script. 
   
   Patootie uses the environment variable TOOTACCT to specify the tooting account otherwise it uses whichever one is currently active in toot. 
   
