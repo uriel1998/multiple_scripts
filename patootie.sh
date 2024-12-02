@@ -112,8 +112,12 @@ fi
 
 
 if [ "$BSKYVAR" == "TRUE" ];then
+    if [ -f $(which loginbsky) ];then
+        loginbsky
+    fi
 
-    postme=$(printf "%s post --text \"%s\" %s %s" "${bsky_binary}" "${TootText}" "${BSendImage}" "${AltBsky}")
+
+    postme=$(printf "%s post --text \"%s\" %s %s" "${bsky_binary}" "${TootText}" "${BSendImage}" "${AltBsky}" | sed 's/\\n/ /g')
     eval "${postme}"
     if [ "$?" == "0" ];then 
         notify-send "Post sent"
@@ -125,8 +129,9 @@ fi
 
 if [ "$TOOTVAR"  == "TRUE" ];then
     if [ -z "$TOOTACCT" ];then 
-            postme=$(printf "%s post --text \"%s\" %s %s" "${binary}" "${TootText}" "${SendImage}" "${AltText}" "${ContentWarning}")
-        eval "${postme}"
+        postme=$(printf "%s post --text \"%s\" %s %s" "${binary}" "${TootText}" "${SendImage}" "${AltText}" "${ContentWarning}")
+        
+       eval "${postme}"
         if [ "$?" == "0" ];then 
             notify-send "Toot sent"
         else
