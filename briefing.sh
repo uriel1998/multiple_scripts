@@ -1,22 +1,65 @@
 #!/bin/bash
 
+##############################################################################
+#
+#  To create an automated news briefing using a command line downloader.
+#  uses a fork of podfox at https://github.com/uriel1998/podfox
+#  that version has had the dependencies updated,
+#  But needs to have a manual venv created instead of just pipx install.
+#
+#  (c) Steven Saus 2025
+#  Licensed under the MIT license
+#
+##############################################################################
 
-/usr/local/bin/podfox -c ~/.podfox.json update
-/usr/local/bin/podfox -c ~/.podfox.json download
+
+export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+source "${SCRIPT_DIR}/maubot_vars.env"
+
+##############################################################################
+# loud outputs on stderr 
+##############################################################################    
+ function loud() {
+    if [ $LOUD -eq 1 ];then
+        echo "$@" 1>&2
+    fi
+}
+
+
+cd ${HOME}/apps/podfox
+source bin/activate
+loud "[info] Running podfox to get news."
+${HOME}/apps/podfox/bin/podfox -c ${SCRIPT_DIR}/podfox.json update
+${HOME}/apps/podfox/bin/podfox -c ${SCRIPT_DIR}/podfox.json download
+
+deactivate
+
+cd "${SCRIPT_DIR}"
+loud "[info] Organizing briefing"
+# prune old stuff
+rm -rf ${HOME}/briefing/*
 
 today=`date +%Y%m%d`
-mkdir -p ~/briefing/$today
+if [ ! -d "${HOME}/briefing/${today}" ];then 
+    mkdir -p ${HOME}/briefing/${today}
+fi
 
-#Uncomment to remove all old briefings
-#rm -rf ~/briefing/*
 
 # Moving podcasts to central directory.
-find ~/podcasts -name '*.mp3' -exec mv {} ~/briefing/$today \;
+find ${HOME}/podcasts -name '*.mp3' -exec mv {} ${HOME}/briefing/${today} \;
 
 
 #https://askubuntu.com/questions/259726/how-can-i-generate-an-m3u-playlist-from-the-terminal
 
-# This does not seem to work with ~/ for $HOME, so I've put the full user
-# path here.
-playlist='/home/user/briefing/play.m3u' ; if [ -f $playlist ]; then rm $playlist ; fi ; for f in /home/user/briefing/$today/*.mp3; do echo "$f" >> "$playlist"; done
-mplayer -playlist "$playlist"
+loud "[info] Creating playlist"
+
+playlist="${HOME}/briefing/play.m3u"
+if [ -f "${playlist}" ]; then 
+    rm "${playlist}" 
+fi 
+
+for f in ${HOME}/briefing/${today}/*.mp3; do echo "$f" >> "${playlist}"; done
+loud "[info] Playing briefing"
+
+# This will be blocking, however, I'm calling this program from a subshell.
+mplayer -playlist "${playlist}"
