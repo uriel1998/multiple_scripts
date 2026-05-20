@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+usage() {
+    printf 'Usage: rename-pane NAME\n' >&2
+}
+
+if [[ -z "${TMUX:-}" ]]; then
+    printf 'rename-pane: not inside tmux\n' >&2
+    exit 1
+fi
+
+if [[ "${#}" -lt 1 ]]; then
+    usage
+    exit 2
+fi
+
+pane_name="${*}"
+
+tmux select-pane -T "${pane_name}"
