@@ -56,7 +56,10 @@ prefer. Pass `--kitty` to request Kitty graphics previews when running inside a
 Kitty terminal; otherwise the script silently falls back to the normal preview
 mode. Use `--create-cache` to build an optional `.clipimg.cache` file next to
 the script; when that cache exists, normal runs reuse it instead of rescanning
-the configured stickerpack directories live.
+the configured stickerpack directories live. Cache builds are safe to run from
+cron: `--create-cache` prefers config files next to the script, writes the
+cache atomically through a temporary file, and does not depend on `dragon`
+being present in the cron environment.
 
 For output, the script will use any available combination of `dragon`, `xclip`,
 and `copyq`. In normal mode, `copyq` receives both the image payload and the

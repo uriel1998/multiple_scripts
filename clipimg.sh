@@ -33,15 +33,28 @@ StickerPackPaths=()
 RequestedStickerPacks=()
 
 find_clipimg_config() {
-    local -a candidates=(
-        "${PWD}/.clipimg.env"
-        "${PWD}/clipimg.ini"
-        "${PWD}/.clipimg.ini"
-        "${SCRIPT_DIR}/.clipimg.env"
-        "${SCRIPT_DIR}/clipimg.ini"
-        "${SCRIPT_DIR}/.clipimg.ini"
-    )
+    local -a candidates=()
     local candidate
+
+    if [ "$CreateCacheOnly" = "true" ]; then
+        candidates=(
+            "${SCRIPT_DIR}/.clipimg.env"
+            "${SCRIPT_DIR}/clipimg.ini"
+            "${SCRIPT_DIR}/.clipimg.ini"
+            "${PWD}/.clipimg.env"
+            "${PWD}/clipimg.ini"
+            "${PWD}/.clipimg.ini"
+        )
+    else
+        candidates=(
+            "${PWD}/.clipimg.env"
+            "${PWD}/clipimg.ini"
+            "${PWD}/.clipimg.ini"
+            "${SCRIPT_DIR}/.clipimg.env"
+            "${SCRIPT_DIR}/clipimg.ini"
+            "${SCRIPT_DIR}/.clipimg.ini"
+        )
+    fi
 
     for candidate in "${candidates[@]}"; do
         if [ -f "$candidate" ]; then
@@ -203,11 +216,7 @@ build_search_items() {
         return 0
     fi
 
-    if [ -n "$DRAGON_BIN" ]; then
-        extensions=(png jpg jpeg gif webp)
-    else
-        extensions=(png jpg jpeg webp)
-    fi
+    extensions=(png jpg jpeg gif webp)
 
     for path in "${extensions[@]}"; do
         finder_args+=(-e "$path")
@@ -283,13 +292,18 @@ load_choices_from_cache() {
 
 create_cache() {
     local cache_file="$CLIPIMG_CACHE_FILE"
+    local cache_dir
+    local temp_cache_file
 
-    : > "$cache_file"
+    cache_dir="$(dirname "$cache_file")"
+    mkdir -p "$cache_dir"
+    temp_cache_file="$(mktemp "${cache_dir}/.clipimg.cache.tmp.XXXXXX")"
 
     for i in "${!StickerPackNames[@]}"; do
-        build_search_items "${StickerPackNames[$i]}" "${StickerPackPaths[$i]}" "stickerpack" "$cache_file"
+        build_search_items "${StickerPackNames[$i]}" "${StickerPackPaths[$i]}" "stickerpack" "$temp_cache_file"
     done
 
+    mv -f "$temp_cache_file" "$cache_file"
     printf 'Wrote cache to %s\n' "$cache_file"
 }
 
