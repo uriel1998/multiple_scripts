@@ -1,237 +1,227 @@
 #!/bin/bash
 
 ##############################################################################
-#  
-#  clipimg.sh 
-#  By Steven Saus 
+#
+#  clipimg.sh
+#  By Steven Saus
 #  (c) 2020; licensed under the MIT license
 #
-#  Uses fzf or rofi to choose a clipart emoji (or reaction image) from a list,
-#  then copies it to the clipboard (using xclip) and selects it for pasting.
+#  Uses fzf or rofi to choose a sticker, icon, or clipart image from a list,
+#  then copies it to the clipboard and selects it for pasting.
 ##############################################################################
 
-#https://bbs.archlinux.org/viewtopic.php?id=144741
-
-#Example of how to copy image to clipboard from sxiv:
-
-# Add to config.h of sxiv
-#{ true, XK_c, it_shell_cmd, (arg_t)"xcmenu -bwi image/png < \"$SXIV_IMG\"; xcmenu -bi text/uri-list \"$SXIV_IMG\"" },
-
-#Even though, it stores it in image/png. At least sxiv itself and gimp will open the file fine in any file format you copy to the buffer for some reason (even animated gifs work).
-
-#Add files to text/uri-list copy buffer:
-
-#echo "file:///home/user/README\nfile:///home/user/video.mkv" | xcmenu -bi text/uri-list
-
-#This works at least with qtfm which is the only graphical fm I have installed for testing atm.
-#It should be possible to integrate this with ranger for example I think.
-
-#does this not work for gif?
-
-# this does work with gifs if you have DRAGON installed:
-# https://github.com/mwh/dragon
-# and will preferentially use DRAGON if it is in your path
-
-##############################################################################
-# Init
-##############################################################################
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-CLIPIMG_ENV_FILE="${SCRIPT_DIR}/.clipimg.env"
-
-EmojiPath="${EmojiPath:-}"
-ReactionPath="${ReactionPath:-}"
-IconPath="${IconPath:-}"
-ClipartPath="${ClipartPath:-}"
+CLIPIMG_ENV_FILE=""
 
 FD_FIND="$(command -v fdfind || true)"
 FD_ALT="$(command -v fd || true)"
 TIMG_BIN="$(command -v timg || true)"
 CHAFA_BIN="$(command -v chafa || true)"
-TempSearchPath=""
-TempSearchLabel=""
-Emoji="true"
-Reaction="true"
-Icon="false"
-Clipart="false"
+DRAGON_BIN="$(command -v dragon || true)"
+
+IconPath=""
+ClipartPath=""
 CliOnly="true"
+UseStickerPacks="true"
+UseIcons="false"
+UseClipart="false"
 Choices=()
-DRAGON_bin="$(command -v dragon || true)"
+StickerPackNames=()
+StickerPackPaths=()
 
-if [ -f "$CLIPIMG_ENV_FILE" ]; then
-    # shellcheck disable=SC1090,SC1091
-    . "$CLIPIMG_ENV_FILE"
-fi
+find_clipimg_config() {
+    local -a candidates=(
+        "${PWD}/.clipimg.env"
+        "${PWD}/clipimg.ini"
+        "${PWD}/.clipimg.ini"
+        "${SCRIPT_DIR}/.clipimg.env"
+        "${SCRIPT_DIR}/clipimg.ini"
+        "${SCRIPT_DIR}/.clipimg.ini"
+    )
+    local candidate
 
+    for candidate in "${candidates[@]}"; do
+        if [ -f "$candidate" ]; then
+            printf '%s' "$candidate"
+            return 0
+        fi
+    done
 
-##############################################################################
-# Show the Help
-##############################################################################
-display_help(){
+    return 1
+}
+
+trim_whitespace() {
+    local value="$1"
+
+    value="${value#"${value%%[![:space:]]*}"}"
+    value="${value%"${value##*[![:space:]]}"}"
+    printf '%s' "$value"
+}
+
+strip_surrounding_quotes() {
+    local value="$1"
+
+    if [[ "$value" == \"*\" && "$value" == *\" ]]; then
+        value="${value:1:${#value}-2}"
+    elif [[ "$value" == \'*\' && "$value" == *\' ]]; then
+        value="${value:1:${#value}-2}"
+    fi
+
+    printf '%s' "$value"
+}
+
+is_supported_image_file() {
+    local path="$1"
+    local extension="${path##*.}"
+
+    extension="${extension,,}"
+
+    case "$extension" in
+        png|jpg|jpeg|gif|webp)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+display_help() {
     echo "###################################################################"
     echo "#  clipimg.sh [-h|--help]"
     echo "# -h, --help  show help"
-    echo "# -g GUI interface only. Default is CLI/TUI. "
-    echo "# -a select clipart only. Not selected by default. "
-    echo "# -i select icon only. Not selected by default. "
-    echo "# -e select emoji only. Default is emoji and reactions. "
-    echo "# -r select reaction only. Default is emoji and reactions. "
+    echo "# -g GUI interface only. Default is CLI/TUI."
+    echo "# -a select clipart only. Not selected by default."
+    echo "# -i select icon only. Not selected by default."
+    echo "# By default, uncommented entries under [StickerPacks] are used."
     echo "###################################################################"
 }
 
-##############################################################################
-# So that you can join two (or more) directories worth of choices
-# If fdfind (what "fd" is called on Debian) is installed, it will be used 
-##############################################################################
+add_stickerpack_entry() {
+    local entry_name="$1"
+    local entry_path="$2"
+
+    entry_name="$(trim_whitespace "$entry_name")"
+    entry_path="$(trim_whitespace "$entry_path")"
+    entry_path="$(strip_surrounding_quotes "$entry_path")"
+
+    [ -n "$entry_name" ] || return 0
+    [ -n "$entry_path" ] || return 0
+
+    StickerPackNames+=("$entry_name")
+    StickerPackPaths+=("$entry_path")
+}
+
+load_clipimg_env() {
+    local current_section=""
+    local raw_line
+    local trimmed_line
+    local key
+    local value
+
+    [ -n "$CLIPIMG_ENV_FILE" ] || return 0
+    [ -f "$CLIPIMG_ENV_FILE" ] || return 0
+
+    while IFS= read -r raw_line || [ -n "$raw_line" ]; do
+        trimmed_line="$(trim_whitespace "$raw_line")"
+
+        [ -n "$trimmed_line" ] || continue
+        [[ "$trimmed_line" == \#* ]] && continue
+
+        if [[ "$trimmed_line" =~ ^\[(.+)\]$ ]]; then
+            current_section="${BASH_REMATCH[1],,}"
+            continue
+        fi
+
+        case "$current_section" in
+            stickerpacks)
+                if [[ "$trimmed_line" == *:* ]]; then
+                    key="${trimmed_line%%:*}"
+                    value="${trimmed_line#*:}"
+                    add_stickerpack_entry "$key" "$value"
+                fi
+                ;;
+            icons)
+                if [[ "$trimmed_line" == *=* ]]; then
+                    key="$(trim_whitespace "${trimmed_line%%=*}")"
+                    value="$(trim_whitespace "${trimmed_line#*=}")"
+                    value="$(strip_surrounding_quotes "$value")"
+                    if [[ "${key,,}" == "iconpath" ]]; then
+                        IconPath="$value"
+                    fi
+                fi
+                ;;
+            clipart)
+                if [[ "$trimmed_line" == *=* ]]; then
+                    key="$(trim_whitespace "${trimmed_line%%=*}")"
+                    value="$(trim_whitespace "${trimmed_line#*=}")"
+                    value="$(strip_surrounding_quotes "$value")"
+                    if [[ "${key,,}" == "clipartpath" ]]; then
+                        ClipartPath="$value"
+                    fi
+                fi
+                ;;
+        esac
+    done < "$CLIPIMG_ENV_FILE"
+}
 
 build_search_items() {
+    local search_label="$1"
+    local search_path="$2"
+    local display_mode="$3"
     local -a extensions=()
     local -a finder_args=()
     local path
-    local relative_path
     local display_path
-    local first_segment
-    local singular_label
+    local filename_only
     local search_root
 
-    if ! search_root="$(realpath -e "$TempSearchPath" 2>/dev/null)"; then
-        printf 'Warning: search path not found or invalid: %s\n' "$TempSearchPath" >&2
-        TempSearchPath=""
-        TempSearchLabel=""
+    if ! search_root="$(realpath -e "$search_path" 2>/dev/null)"; then
         return 0
     fi
 
-    singular_label="${TempSearchLabel%s}"
-
-    if [ -n "$DRAGON_bin" ]; then
-        extensions=(png jpg gif)
+    if [ -n "$DRAGON_BIN" ]; then
+        extensions=(png jpg jpeg gif webp)
     else
-        extensions=(png jpg)
+        extensions=(png jpg jpeg webp)
     fi
 
     for path in "${extensions[@]}"; do
         finder_args+=(-e "$path")
     done
 
-    if [ -n "$FD_FIND" ]; then
-        while IFS= read -r path; do
-            [ -n "$path" ] || continue
-            relative_path="$(realpath --relative-to="$search_root" "$path" 2>/dev/null || basename "$path")"
-            first_segment="${relative_path%%/*}"
-            if [ "$relative_path" != "$first_segment" ] && { [ "$first_segment" = "$TempSearchLabel" ] || [ "$first_segment" = "$singular_label" ]; }; then
-                relative_path="${relative_path#*/}"
-            fi
-            display_path="${TempSearchLabel}: ${relative_path}"
-            Choices+=("${path}"$'\t'"${display_path}")
-        done < <("$FD_FIND" -a "${finder_args[@]}" . "$search_root")
-    elif [ -n "$FD_ALT" ]; then
-        while IFS= read -r path; do
-            [ -n "$path" ] || continue
-            relative_path="$(realpath --relative-to="$search_root" "$path" 2>/dev/null || basename "$path")"
-            first_segment="${relative_path%%/*}"
-            if [ "$relative_path" != "$first_segment" ] && { [ "$first_segment" = "$TempSearchLabel" ] || [ "$first_segment" = "$singular_label" ]; }; then
-                relative_path="${relative_path#*/}"
-            fi
-            display_path="${TempSearchLabel}: ${relative_path}"
-            Choices+=("${path}"$'\t'"${display_path}")
-        done < <("$FD_ALT" -a "${finder_args[@]}" . "$search_root")
-    else
-        while IFS= read -r path; do
-            [ -n "$path" ] || continue
-            relative_path="$(realpath --relative-to="$search_root" "$path" 2>/dev/null || basename "$path")"
-            first_segment="${relative_path%%/*}"
-            if [ "$relative_path" != "$first_segment" ] && { [ "$first_segment" = "$TempSearchLabel" ] || [ "$first_segment" = "$singular_label" ]; }; then
-                relative_path="${relative_path#*/}"
-            fi
-            display_path="${TempSearchLabel}: ${relative_path}"
-            Choices+=("${path}"$'\t'"${display_path}")
-        done < <(
+    while IFS= read -r path; do
+        [ -n "$path" ] || continue
+        is_supported_image_file "$path" || continue
+        filename_only="$(basename "$path")"
+        filename_only="${filename_only%.*}"
+
+        case "$display_mode" in
+            stickerpack)
+                display_path="${search_label}:${filename_only}"
+                ;;
+            *)
+                display_path="${search_label}: ${filename_only}"
+                ;;
+        esac
+
+        Choices+=("${path}"$'\t'"${display_path}")
+    done < <(
+        if [ -n "$FD_FIND" ]; then
+            "$FD_FIND" -a "${finder_args[@]}" . "$search_root"
+        elif [ -n "$FD_ALT" ]; then
+            "$FD_ALT" -a "${finder_args[@]}" . "$search_root"
+        else
             find -H "$search_root" -type f \( \
                 -iname "*.png" -o \
                 -iname "*.jpg" -o \
-                -iname "*.gif" \
+                -iname "*.jpeg" -o \
+                -iname "*.gif" -o \
+                -iname "*.webp" \
             \)
-        )
-    fi
-
-    TempSearchPath=""
-    TempSearchLabel=""
+        fi
+    )
 }
-    #uses copyq to select image and copy it to clipboard for pasting
-    while [ $# -gt 0 ]; do
-    option="$1"
-        case $option in
-        -h|--help) display_help
-            exit
-            ;;      
-             #this is actually a negative selector
-        -r) Reaction="true"
-            Emoji="false"
-            Clipart="false"
-            Icon="false"
-            shift ;;      
-        -e) Emoji="true"
-            Reaction="false"
-            Clipart="false"
-            Icon="false"
-            shift ;;
-            # these are positive selectors, since they're not default
-        -a) Clipart="true"
-            Emoji="false"
-            Reaction="false"
-            Icon="false"
-            shift ;;
-        -i) Clipart="false"
-            Emoji="false"
-            Reaction="false"
-            Icon="true"
-            shift ;;            
-        -g) CliOnly="false"
-            shift ;;
-        *)
-            printf 'Unknown option: %s\n' "$option" >&2
-            display_help >&2
-            exit 2
-            ;;
-        esac
-    done    
-
-    
-    # Creating the search items by just adding more. You can see how more 
-    # switches and directories can be added here.
-    # This could maybe be fancier, but it would be more complicated
-    if [ "$Emoji" == "true" ];then
-        TempSearchPath="$EmojiPath"
-        TempSearchLabel="emoji"
-        build_search_items
-    fi
-    if [ "$Reaction" == "true" ];then
-        TempSearchPath="$ReactionPath"
-        TempSearchLabel="reaction"
-        build_search_items
-    fi
-    if [ "$Clipart" == "true" ];then
-        TempSearchPath="$ClipartPath"
-        TempSearchLabel="clipart"
-        build_search_items
-    fi
-    if [ "$Icon" == "true" ];then
-        TempSearchPath="$IconPath"
-        TempSearchLabel="icon"
-        build_search_items
-    fi
-
-    mapfile -t Choices < <(printf '%s\n' "${Choices[@]}" | sort -t $'\t' -k 2,2)
-
-
-##############################################################################
-# Select that Image!
-#    
-# add 
-# --preview 'chafa {}' 
-# to the fzf string to get the preview window
-#    
-# AFAIK there's no way to preview with rofi 
-##############################################################################
 
 select_image() {
     local choices_file
@@ -240,6 +230,8 @@ select_image() {
     local selected_label=""
     local timg_escaped=""
     local chafa_escaped=""
+
+    [ "${#Choices[@]}" -gt 0 ] || return 0
 
     choices_file="$(mktemp)"
     printf '%s\n' "${Choices[@]}" > "$choices_file"
@@ -262,14 +254,14 @@ select_image() {
                 --border \
                 --ansi \
                 --no-bold \
-                --header "Which Reaction?" \
+                --header "Which image?" \
                 --delimiter=$'\t' \
                 --with-nth=2 \
                 --preview "$preview_command" < "$choices_file"
         )"
     else
         selected_label="$(
-            cut -f2- "$choices_file" | rofi -i -dmenu -p "Which Reaction?" -theme DarkBlue
+            cut -f2- "$choices_file" | rofi -i -dmenu -p "Which image?" -theme DarkBlue
         )"
         if [ -n "$selected_label" ]; then
             selected_row="$(awk -F '\t' -v label="$selected_label" '$2 == label { print; exit }' "$choices_file")"
@@ -277,31 +269,72 @@ select_image() {
     fi
 
     rm -f "$choices_file"
-
     printf '%s\n' "$selected_row"
 }
+
+CLIPIMG_ENV_FILE="$(find_clipimg_config || true)"
+load_clipimg_env
+
+while [ $# -gt 0 ]; do
+    option="$1"
+    case "$option" in
+        -h|--help)
+            display_help
+            exit 0
+            ;;
+        -a)
+            UseStickerPacks="false"
+            UseIcons="false"
+            UseClipart="true"
+            shift
+            ;;
+        -i)
+            UseStickerPacks="false"
+            UseIcons="true"
+            UseClipart="false"
+            shift
+            ;;
+        -g)
+            CliOnly="false"
+            shift
+            ;;
+        *)
+            printf 'Unknown option: %s\n' "$option" >&2
+            display_help >&2
+            exit 2
+            ;;
+    esac
+done
+
+if [ "$UseStickerPacks" == "true" ]; then
+    for i in "${!StickerPackNames[@]}"; do
+        build_search_items "${StickerPackNames[$i]}" "${StickerPackPaths[$i]}" "stickerpack"
+    done
+fi
+
+if [ "$UseClipart" == "true" ] && [ -n "$ClipartPath" ]; then
+    build_search_items "clipart" "$ClipartPath" "clipart"
+fi
+
+if [ "$UseIcons" == "true" ] && [ -n "$IconPath" ]; then
+    build_search_items "icon" "$IconPath" "icon"
+fi
+
+mapfile -t Choices < <(printf '%s\n' "${Choices[@]}" | awk 'NF' | sort -t $'\t' -k 2,2)
 
 SelectedRow="$(select_image)"
 SelectedImage="$(printf '%s' "$SelectedRow" | awk -F $'\t' '{print $1}')"
 
-
-##############################################################################
-# Slap that sucker on the clipboard and select it
-##############################################################################
-
-if [ -f "$SelectedImage" ];then
-    if [ -n "$DRAGON_bin" ];then
-        "$DRAGON_bin" -a -x "$SelectedImage" &
+if [ -f "$SelectedImage" ]; then
+    if [ -n "$DRAGON_BIN" ]; then
+        "$DRAGON_BIN" -a -x "$SelectedImage" &
     else
-        mime=$(mimetype "$SelectedImage" | awk -F ': ' '{print $2}')
-        # Tee does not seem to like binary data...
+        mime="$(mimetype "$SelectedImage" | awk -F ': ' '{print $2}')"
         xclip -i -selection primary -t "$mime" < "$SelectedImage" > /dev/null
         xclip -i -selection clipboard -t "$mime" < "$SelectedImage" > /dev/null
-        #if you use copyq you need these lines to have it offer up the selection
         /usr/bin/copyq write 0 "$mime" - < "$SelectedImage"
         /usr/bin/copyq select 0
-        # putting the filename in the second position
-        if [ "$Icon" == "true" ] || [ "$Clipart" == "true" ];then
+        if [ "$UseIcons" == "true" ] || [ "$UseClipart" == "true" ]; then
             /usr/bin/copyq insert 1 "$SelectedImage"
             /usr/bin/copyq select 0
         fi
