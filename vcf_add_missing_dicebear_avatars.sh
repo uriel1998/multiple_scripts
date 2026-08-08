@@ -12,13 +12,14 @@ usage() {
 Usage: vcf_add_missing_dicebear_avatars.sh [DIRECTORY]
 
 Scans a directory of .vcf files, skips cards that already contain a PHOTO field,
-builds a DiceBear seed from the available FN, EMAIL, TEL, and ORG values, calls
-dicebear_helper_generate_avatar.sh, and inserts the generated PNG as a PHOTO
-entry before END:VCARD.
+tries Libravatar and then Gravatar for any non-placeholder email addresses on
+the card, and falls back to dicebear_helper_generate_avatar.sh only if no email
+avatar is available. It then inserts the generated or downloaded image as a
+PHOTO entry before END:VCARD.
 
 If DIRECTORY is omitted, the script scans the current working directory.
 
-Each generated avatar is also marked with:
+When the script falls back to DiceBear, it also marks the card with:
 X-DICEBEAR-GENERATED:TRUE
 X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh
 
@@ -72,6 +73,20 @@ extract_value() {
     ' "$file"
 }
 
+extract_values() {
+    local key="$1"
+    local file="$2"
+
+    awk -F ':' -v key="$key" '
+        BEGIN {
+            IGNORECASE = 1
+        }
+        $1 ~ ("^" key "([;]|$)") {
+            print substr($0, index($0, ":") + 1)
+        }
+    ' "$file"
+}
+
 has_photo() {
     awk '
         BEGIN {
@@ -90,9 +105,28 @@ has_photo() {
 build_photo_block() {
     local image_path="$1"
     local encoded
+    local mime_type
+    local photo_type
+
+    mime_type="$(file --mime-type -b "$image_path")"
+    case "$mime_type" in
+        image/jpeg)
+            photo_type="JPEG"
+            ;;
+        image/png)
+            photo_type="PNG"
+            ;;
+        image/gif)
+            photo_type="GIF"
+            ;;
+        *)
+            printf 'Unsupported avatar mime type: %s\n' "$mime_type" >&2
+            return 1
+            ;;
+    esac
 
     encoded="$(base64 -w 0 "$image_path")"
-    printf 'PHOTO;ENCODING=B;TYPE=PNG:%s\n' "${encoded:0:75}"
+    printf 'PHOTO;ENCODING=B;TYPE=%s;VALUE=BINARY:%s\n' "$photo_type" "${encoded:0:75}"
     encoded="${encoded:75}"
 
     while [ -n "$encoded" ]; do
@@ -102,10 +136,112 @@ build_photo_block() {
 }
 
 build_generated_marker_block() {
+    local source="${1:-}"
+
+    [ "$source" = "dicebear" ] || return 0
+
     cat <<'EOF'
 X-DICEBEAR-GENERATED:TRUE
 X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh
 EOF
+}
+
+normalize_email() {
+    local email_value="${1:-}"
+
+    email_value="$(trim "$email_value")"
+    email_value="${email_value,,}"
+    printf '%s' "$email_value"
+}
+
+is_placeholder_email() {
+    local email_value
+    local local_part
+    local domain_part
+
+    email_value="$(normalize_email "${1:-}")"
+    [ -n "$email_value" ] || return 0
+    case "$email_value" in
+        *"@"*)
+            ;;
+        *)
+            return 0
+            ;;
+    esac
+
+    local_part="${email_value%@*}"
+    domain_part="${email_value#*@}"
+
+    case "$local_part" in
+        nobody*|no-reply|noreply|donotreply|do-not-reply)
+            return 0
+            ;;
+    esac
+
+    case "$domain_part" in
+        nowhere.invalid|invalid|example.com|example.org|example.net|localhost|localdomain)
+            return 0
+            ;;
+    esac
+
+    return 1
+}
+
+email_avatar_hash() {
+    local email_value
+
+    email_value="$(normalize_email "${1:-}")"
+    printf '%s' "$email_value" | md5sum | awk '{print $1}'
+}
+
+fetch_avatar_url() {
+    local url="$1"
+    local output_path="$2"
+    local mime_type
+
+    rm -f "$output_path"
+    if ! wget -q --server-response --timeout=20 --tries=1 "$url" -O "$output_path" 2>/dev/null; then
+        rm -f "$output_path"
+        return 1
+    fi
+
+    if [ ! -s "$output_path" ]; then
+        rm -f "$output_path"
+        return 1
+    fi
+
+    mime_type="$(file --mime-type -b "$output_path")"
+    case "$mime_type" in
+        image/jpeg|image/png|image/gif)
+            return 0
+            ;;
+        *)
+            rm -f "$output_path"
+            return 1
+            ;;
+    esac
+}
+
+fetch_avatar_from_email() {
+    local email_value="$1"
+    local avatar_hash
+    local target_file
+
+    avatar_hash="$(email_avatar_hash "$email_value")"
+    target_file="$(mktemp)"
+
+    if fetch_avatar_url "https://seccdn.libravatar.org/avatar/${avatar_hash}?d=404&s=512" "$target_file"; then
+        printf '%s\n' "$target_file"
+        return 0
+    fi
+
+    if fetch_avatar_url "https://www.gravatar.com/avatar/${avatar_hash}?d=404&s=512" "$target_file"; then
+        printf '%s\n' "$target_file"
+        return 0
+    fi
+
+    rm -f "$target_file"
+    return 1
 }
 
 insert_photo() {
@@ -156,10 +292,13 @@ process_vcf() {
     local tel_value
     local org_value
     local seed_parts=()
+    local -a email_values=()
+    local avatar_source=""
     local avatar_path
     local helper_stderr_file
     local photo_block_file
     local marker_block_file
+    local email_candidate
 
     unfolded_file="$(mktemp)"
     unfold_vcard "$vcf_file" > "$unfolded_file"
@@ -174,6 +313,10 @@ process_vcf() {
     email_value="$(trim "$(extract_value "EMAIL" "$unfolded_file")")"
     tel_value="$(trim "$(extract_value "TEL" "$unfolded_file")")"
     org_value="$(trim "$(extract_value "ORG" "$unfolded_file")")"
+    while IFS= read -r email_candidate; do
+        email_candidate="$(normalize_email "$email_candidate")"
+        [ -n "$email_candidate" ] && email_values+=("$email_candidate")
+    done < <(extract_values "EMAIL" "$unfolded_file")
     rm -f "$unfolded_file"
 
     [ -n "$fn_value" ] && seed_parts+=("$fn_value")
@@ -186,24 +329,38 @@ process_vcf() {
         return 0
     fi
 
-    helper_stderr_file="$(mktemp)"
-    if ! avatar_path="$(
-        DICEBEAR_AVATAR_DIR="$DICEBEAR_AVATAR_DIR" \
-        DICEBEAR_NO_CLIPBOARD=1 \
-        "$DICEBEAR_HELPER" "${seed_parts[@]}" 2>"$helper_stderr_file"
-    )"; then
-        printf 'helper-failed %s\n' "$vcf_file" >&2
+    for email_candidate in "${email_values[@]}"; do
+        if is_placeholder_email "$email_candidate"; then
+            continue
+        fi
+
+        if avatar_path="$(fetch_avatar_from_email "$email_candidate")"; then
+            avatar_source="remote"
+            break
+        fi
+    done
+
+    if [ -z "$avatar_source" ]; then
+        helper_stderr_file="$(mktemp)"
+        if ! avatar_path="$(
+            DICEBEAR_AVATAR_DIR="$DICEBEAR_AVATAR_DIR" \
+            DICEBEAR_NO_CLIPBOARD=1 \
+            "$DICEBEAR_HELPER" "${seed_parts[@]}" 2>"$helper_stderr_file"
+        )"; then
+            printf 'helper-failed %s\n' "$vcf_file" >&2
+            if [ -s "$helper_stderr_file" ]; then
+                cat "$helper_stderr_file" >&2
+            fi
+            rm -f "$helper_stderr_file"
+            return 1
+        fi
+
         if [ -s "$helper_stderr_file" ]; then
             cat "$helper_stderr_file" >&2
         fi
         rm -f "$helper_stderr_file"
-        return 1
+        avatar_source="dicebear"
     fi
-
-    if [ -s "$helper_stderr_file" ]; then
-        cat "$helper_stderr_file" >&2
-    fi
-    rm -f "$helper_stderr_file"
 
     avatar_path="$(trim "$avatar_path")"
     if [ -z "$avatar_path" ]; then
@@ -218,13 +375,19 @@ process_vcf() {
 
     photo_block_file="$(mktemp)"
     marker_block_file="$(mktemp)"
-    build_photo_block "$avatar_path" > "$photo_block_file"
-    build_generated_marker_block > "$marker_block_file"
+    if ! build_photo_block "$avatar_path" > "$photo_block_file"; then
+        rm -f "$photo_block_file" "$marker_block_file"
+        [ "$avatar_source" = "remote" ] && rm -f "$avatar_path"
+        return 1
+    fi
+    build_generated_marker_block "$avatar_source" > "$marker_block_file"
     if ! insert_photo "$vcf_file" "$photo_block_file" "$marker_block_file"; then
         rm -f "$photo_block_file" "$marker_block_file"
+        [ "$avatar_source" = "remote" ] && rm -f "$avatar_path"
         return 1
     fi
     rm -f "$photo_block_file" "$marker_block_file"
+    [ "$avatar_source" = "remote" ] && rm -f "$avatar_path"
 
     printf 'updated %s\n' "$vcf_file"
 }

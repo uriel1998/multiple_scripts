@@ -85,13 +85,15 @@ than the default cache directory.
 ## vcf_add_missing_dicebear_avatars.sh
 
 Scans a directory of `.vcf` files, skips cards that already have a `PHOTO`,
-builds a seed from the available `FN`, `EMAIL`, `TEL`, and `ORG` fields,
-generates a DiceBear avatar, and embeds it into the card.
+tries Libravatar first and then Gravatar for any non-placeholder email
+addresses on the card, and only falls back to DiceBear if no email-based avatar
+is available.
 
-It also adds `X-DICEBEAR-GENERATED:TRUE` and
-`X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh` so the generated avatars
-can be identified and removed later. Pass a contacts directory explicitly, or
-let it scan the current working directory. `--help` shows the current options.
+When it uses DiceBear, it adds `X-DICEBEAR-GENERATED:TRUE` and
+`X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh` so those generated
+avatars can be identified and removed later. Pass a contacts directory
+explicitly, or let it scan the current working directory. `--help` shows the
+current options.
 
 ## vcf_remove_dicebear_avatars.sh
 
