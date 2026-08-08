@@ -3,26 +3,37 @@
 set -euo pipefail
 
 DEFAULT_CONTACT_DIR="${VCF_CONTACT_DIR:-$PWD}"
+SOURCE_FILTER="all"
 
 usage() {
     cat <<'EOF'
-Usage: vcf_remove_dicebear_avatars.sh [DIRECTORY]
+Usage: vcf_remove_dicebear_avatars.sh [--source SOURCE] [DIRECTORY]
 
 Scans a directory of .vcf files and removes embedded PHOTO fields only from
 cards marked with:
 X-DICEBEAR-GENERATED:TRUE
-X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh
+X-DICEBEAR-SOURCE:dicebear|libravatar|gravatar
 
-It also removes those marker fields from the updated cards.
+It also removes those marker fields from the updated cards. By default it
+removes all avatars added by our scripts. Use --source to restrict removal to
+one source.
 
 If DIRECTORY is omitted, the script scans the current working directory.
 
 Examples:
   vcf_remove_dicebear_avatars.sh
+  vcf_remove_dicebear_avatars.sh --source dicebear
   vcf_remove_dicebear_avatars.sh ./contacts
+  vcf_remove_dicebear_avatars.sh --source gravatar ./contacts
 
 Optional environment override:
   VCF_CONTACT_DIR=/path/to/contacts
+
+Valid --source values:
+  all
+  dicebear
+  libravatar
+  gravatar
 EOF
 }
 
@@ -42,7 +53,7 @@ unfold_vcard() {
     ' "$1"
 }
 
-has_dicebear_markers() {
+marker_source() {
     awk '
         BEGIN {
             IGNORECASE = 1
@@ -50,17 +61,22 @@ has_dicebear_markers() {
         /^X-DICEBEAR-GENERATED:TRUE$/ {
             generated = 1
         }
-        /^X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar\.sh$/ {
-            source = 1
+        /^X-DICEBEAR-SOURCE:(dicebear|libravatar|gravatar)$/ {
+            source = substr($0, index($0, ":") + 1)
         }
         END {
-            exit(generated && source ? 0 : 1)
+            if (generated && source != "") {
+                print source
+                exit 0
+            }
+            exit 1
         }
     ' "$1"
 }
 
 rewrite_without_dicebear_avatar() {
     local vcf_file="$1"
+    local marker_source="$2"
     local temp_file
     local newline=$'\n'
     local line
@@ -88,14 +104,15 @@ rewrite_without_dicebear_avatar() {
             X-DICEBEAR-GENERATED:TRUE|$'X-DICEBEAR-GENERATED:TRUE\r')
                 continue
                 ;;
-            X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh|$'X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh\r')
-                continue
-                ;;
             PHOTO*|$'PHOTO'*)
                 skip_continuations=1
                 continue
                 ;;
         esac
+
+        if [ "$line" = "X-DICEBEAR-SOURCE:${marker_source}" ] || [ "$line" = $'X-DICEBEAR-SOURCE:'"${marker_source}"$'\r' ]; then
+            continue
+        fi
 
         printf '%s%s' "$line" "$newline"
     done < "$vcf_file" > "$temp_file"
@@ -106,29 +123,64 @@ rewrite_without_dicebear_avatar() {
 process_vcf() {
     local vcf_file="$1"
     local unfolded_file
+    local detected_source
 
     unfolded_file="$(mktemp)"
     unfold_vcard "$vcf_file" > "$unfolded_file"
 
-    if ! has_dicebear_markers "$unfolded_file"; then
+    if ! detected_source="$(marker_source "$unfolded_file")"; then
         rm -f "$unfolded_file"
         printf 'skip-unmarked %s\n' "$vcf_file"
         return 0
     fi
 
     rm -f "$unfolded_file"
-    rewrite_without_dicebear_avatar "$vcf_file"
+    if [ "$SOURCE_FILTER" != "all" ] && [ "$detected_source" != "$SOURCE_FILTER" ]; then
+        printf 'skip-source %s\n' "$vcf_file"
+        return 0
+    fi
+
+    rewrite_without_dicebear_avatar "$vcf_file" "$detected_source"
     printf 'updated %s\n' "$vcf_file"
 }
 
 main() {
-    local contact_dir="${1:-$DEFAULT_CONTACT_DIR}"
+    local contact_dir="$DEFAULT_CONTACT_DIR"
     local file_found=0
 
-    if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
-        usage
-        exit 0
-    fi
+    while [ "$#" -gt 0 ]; do
+        case "$1" in
+            --help|-h)
+                usage
+                exit 0
+                ;;
+            --source)
+                shift
+                if [ "$#" -eq 0 ]; then
+                    printf '--source requires a value\n' >&2
+                    exit 1
+                fi
+                SOURCE_FILTER="$1"
+                ;;
+            *)
+                if [ "$contact_dir" != "$DEFAULT_CONTACT_DIR" ]; then
+                    printf 'Unexpected argument: %s\n' "$1" >&2
+                    exit 1
+                fi
+                contact_dir="$1"
+                ;;
+        esac
+        shift
+    done
+
+    case "$SOURCE_FILTER" in
+        all|dicebear|libravatar|gravatar)
+            ;;
+        *)
+            printf 'Invalid --source value: %s\n' "$SOURCE_FILTER" >&2
+            exit 1
+            ;;
+    esac
 
     if [ ! -d "$contact_dir" ]; then
         printf 'Directory not found: %s\n' "$contact_dir" >&2

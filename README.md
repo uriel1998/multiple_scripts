@@ -89,18 +89,18 @@ tries Libravatar first and then Gravatar for any non-placeholder email
 addresses on the card, and only falls back to DiceBear if no email-based avatar
 is available.
 
-When it uses DiceBear, it adds `X-DICEBEAR-GENERATED:TRUE` and
-`X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh` so those generated
-avatars can be identified and removed later. Pass a contacts directory
-explicitly, or let it scan the current working directory. `--help` shows the
-current options.
+It marks inserted avatars with `X-DICEBEAR-GENERATED:TRUE` and an
+`X-DICEBEAR-SOURCE:` value of `dicebear`, `libravatar`, or `gravatar` so they
+can be identified and removed later. Pass a contacts directory explicitly, or
+let it scan the current working directory. `--help` shows the current options.
 
 ## vcf_remove_dicebear_avatars.sh
 
-Reverses the generated-avatar workflow for marked vCards. It looks for the
-DiceBear marker fields, removes them, and strips the embedded `PHOTO` block
-from those cards only. Pass a contacts directory explicitly, or let it scan the
-current working directory. `--help` shows the current options.
+Reverses the marked-avatar workflow for vCards. It looks for the avatar marker
+fields, removes them, and strips the embedded `PHOTO` block from those cards
+only. Use `--source` with `dicebear`, `libravatar`, `gravatar`, or `all` to
+limit what gets removed. Pass a contacts directory explicitly, or let it scan
+the current working directory. `--help` shows the current options.
 
 ## drag-out-of-obsidian.sh
 

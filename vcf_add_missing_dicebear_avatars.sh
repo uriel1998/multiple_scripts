@@ -19,9 +19,9 @@ PHOTO entry before END:VCARD.
 
 If DIRECTORY is omitted, the script scans the current working directory.
 
-When the script falls back to DiceBear, it also marks the card with:
+The script marks inserted avatars with:
 X-DICEBEAR-GENERATED:TRUE
-X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh
+X-DICEBEAR-SOURCE:dicebear|libravatar|gravatar
 
 Examples:
   vcf_add_missing_dicebear_avatars.sh
@@ -138,12 +138,10 @@ build_photo_block() {
 build_generated_marker_block() {
     local source="${1:-}"
 
-    [ "$source" = "dicebear" ] || return 0
+    [ -n "$source" ] || return 0
 
-    cat <<'EOF'
-X-DICEBEAR-GENERATED:TRUE
-X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh
-EOF
+    printf 'X-DICEBEAR-GENERATED:TRUE\n'
+    printf 'X-DICEBEAR-SOURCE:%s\n' "$source"
 }
 
 normalize_email() {
@@ -231,12 +229,12 @@ fetch_avatar_from_email() {
     target_file="$(mktemp)"
 
     if fetch_avatar_url "https://seccdn.libravatar.org/avatar/${avatar_hash}?d=404&s=512" "$target_file"; then
-        printf '%s\n' "$target_file"
+        printf 'libravatar %s\n' "$target_file"
         return 0
     fi
 
     if fetch_avatar_url "https://www.gravatar.com/avatar/${avatar_hash}?d=404&s=512" "$target_file"; then
-        printf '%s\n' "$target_file"
+        printf 'gravatar %s\n' "$target_file"
         return 0
     fi
 
@@ -295,6 +293,7 @@ process_vcf() {
     local -a email_values=()
     local avatar_source=""
     local avatar_path
+    local avatar_lookup_result=""
     local helper_stderr_file
     local photo_block_file
     local marker_block_file
@@ -334,8 +333,9 @@ process_vcf() {
             continue
         fi
 
-        if avatar_path="$(fetch_avatar_from_email "$email_candidate")"; then
-            avatar_source="remote"
+        if avatar_lookup_result="$(fetch_avatar_from_email "$email_candidate")"; then
+            avatar_source="${avatar_lookup_result%% *}"
+            avatar_path="${avatar_lookup_result#* }"
             break
         fi
     done
@@ -377,17 +377,23 @@ process_vcf() {
     marker_block_file="$(mktemp)"
     if ! build_photo_block "$avatar_path" > "$photo_block_file"; then
         rm -f "$photo_block_file" "$marker_block_file"
-        [ "$avatar_source" = "remote" ] && rm -f "$avatar_path"
+        case "$avatar_source" in
+            libravatar|gravatar) rm -f "$avatar_path" ;;
+        esac
         return 1
     fi
     build_generated_marker_block "$avatar_source" > "$marker_block_file"
     if ! insert_photo "$vcf_file" "$photo_block_file" "$marker_block_file"; then
         rm -f "$photo_block_file" "$marker_block_file"
-        [ "$avatar_source" = "remote" ] && rm -f "$avatar_path"
+        case "$avatar_source" in
+            libravatar|gravatar) rm -f "$avatar_path" ;;
+        esac
         return 1
     fi
     rm -f "$photo_block_file" "$marker_block_file"
-    [ "$avatar_source" = "remote" ] && rm -f "$avatar_path"
+    case "$avatar_source" in
+        libravatar|gravatar) rm -f "$avatar_path" ;;
+    esac
 
     printf 'updated %s\n' "$vcf_file"
 }
