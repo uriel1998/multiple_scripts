@@ -136,3 +136,4 @@ site/
 *.tgz
 *.bz2
 *.7z
+output/
