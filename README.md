@@ -131,16 +131,11 @@ clipboard, and select it for pasting.  Works for JPG and PNG, does NOT work for
 GIF, sadly.
 
 ## tmux_devour.sh
-
-Launch a process in a new pane, zoom the pane, kill the pane when done.
-
 ## tmux_sidebar.sh
-
-Create a sidebar (e.g. for reading manpages) and kill when done.
-
 ## tmux_topbar.sh
 
-Create a vertical split and kill when done.
+All three are superceded by https://github.com/uriel1998/tdab
+
 
 ## briefing.sh  
 
@@ -173,7 +168,8 @@ are *not* lumped together, but are treated as separate commands.
 
 #books_search
 
-#joplin_search
+Has been superceded by https://github.com/uriel1998/books_browse
+
 
 
 

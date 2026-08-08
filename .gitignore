@@ -1,0 +1,137 @@
+# Project reference material
+1_reference/
+foliate/
+moon/
+
+# Local agent metadata
+.codex
+
+# OS junk
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Editor and IDE settings
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Microsoft Office temp files
+~$*.*
+
+# Environment and local config
+.env
+.env.*
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.python-version
+
+# Logs and runtime files
+*.log
+*.out
+*.pid
+*.pid.lock
+
+# C and C++ build artifacts
+*.d
+*.slo
+*.lo
+*.o
+*.obj
+*.gch
+*.pch
+*.so
+*.dylib
+*.dll
+*.mod
+*.smod
+*.lai
+*.la
+*.a
+*.lib
+*.exe
+*.app
+
+# Python cache and compiled files
+__pycache__/
+*.py[cod]
+*$py.class
+*.sage.py
+
+# Python packaging and build outputs
+.Python
+build/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/
+share/python-wheels/
+bin/
+include/
+*.egg-info/
+*.egg
+.installed.cfg
+MANIFEST
+
+# Python tooling
+*.manifest
+*.spec
+pip-log.txt
+pip-delete-this-directory.txt
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.ruff_cache/
+
+# Python apps and notebooks
+instance/
+.webassets-cache
+.scrapy/
+docs/_build/
+target/
+.ipynb_checkpoints/
+profile_default/
+ipython_config.py
+local_settings.py
+db.sqlite3
+celerybeat-schedule
+
+# Dependency locks that should stay local for this repo
+Pipfile.lock
+
+# Documentation sites
+site/
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.bz2
+*.7z
