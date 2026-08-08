@@ -25,6 +25,7 @@ IconPath=""
 ClipartPath=""
 CliOnly="true"
 PreferredPreview="auto"
+PreferKittyPreview="false"
 UseStickerPacks="true"
 UseIcons="false"
 UseClipart="false"
@@ -99,6 +100,7 @@ display_help() {
     echo "# -i select icon only. Not selected by default."
     echo "# --chafa prefer chafa for previews."
     echo "# --timg prefer timg for previews."
+    echo "# --kitty use kitty graphics previews when running in kitty."
     echo "# By default, uncommented entries under [StickerPacks] are used."
     echo "# Positional stickerpack names restrict selection to matching packs."
     echo "# Example: clipimg.sh blob blob2"
@@ -107,6 +109,18 @@ display_help() {
     echo "# Clipboard output uses any available combination of dragon,"
     echo "# xclip, and copyq."
     echo "###################################################################"
+}
+
+is_kitty_terminal() {
+    [ -n "${KITTY_WINDOW_ID:-}" ] && return 0
+
+    case "${TERM:-}" in
+        *kitty*)
+            return 0
+            ;;
+    esac
+
+    return 1
 }
 
 stickerpack_requested() {
@@ -252,14 +266,27 @@ build_search_items() {
 
 select_image() {
     local preview_command=""
+    local preview_script=""
     local selected_row=""
     local selected_label=""
     local choice_row=""
     local timg_escaped=""
     local chafa_escaped=""
     local preview_order=""
+    local use_kitty_graphics="false"
+    local preview_prefix=""
 
     [ "${#Choices[@]}" -gt 0 ] || return 0
+
+    if [ "$PreferKittyPreview" = "true" ] && is_kitty_terminal; then
+        use_kitty_graphics="true"
+    fi
+
+    if [ "$use_kitty_graphics" = "true" ]; then
+        preview_prefix="printf '\033_Ga=d,d=A;\033\\' >/dev/tty 2>/dev/null || true; printf '\033[2J\033[H'; "
+    else
+        preview_prefix="printf '\033[2J\033[H'; "
+    fi
 
     case "$PreferredPreview" in
         chafa) preview_order="chafa-first" ;;
@@ -267,21 +294,35 @@ select_image() {
         *) preview_order="chafa-first" ;;
     esac
 
-    if [ "$preview_order" = "timg-first" ] && [ -n "$TIMG_BIN" ]; then
+    if [ "$preview_order" = "timg-first" ] && [ -n "$TIMG_BIN" ] && [ "$use_kitty_graphics" = "true" ]; then
         printf -v timg_escaped '%q' "$TIMG_BIN"
-        preview_command="bash -c 'exec ${timg_escaped} -pq -g 60x60 -- \"\$1\"' _ {1}"
+        preview_script="${preview_prefix}exec ${timg_escaped} -pk -g 60x60 --frames=1 -- \"\$1\""
+    elif [ "$preview_order" = "timg-first" ] && [ -n "$TIMG_BIN" ]; then
+        printf -v timg_escaped '%q' "$TIMG_BIN"
+        preview_script="${preview_prefix}exec ${timg_escaped} -pq -g 60x60 --frames=1 -- \"\$1\""
+    elif [ "$preview_order" = "timg-first" ] && [ -n "$CHAFA_BIN" ] && [ "$use_kitty_graphics" = "true" ]; then
+        printf -v chafa_escaped '%q' "$CHAFA_BIN"
+        preview_script="${preview_prefix}exec ${chafa_escaped} --format kitty --animate off --size 60x60 -- \"\$1\""
     elif [ "$preview_order" = "timg-first" ] && [ -n "$CHAFA_BIN" ]; then
         printf -v chafa_escaped '%q' "$CHAFA_BIN"
-        preview_command="bash -c 'exec ${chafa_escaped} --format symbols --animate off --size 60x60 -- \"\$1\"' _ {1}"
+        preview_script="${preview_prefix}exec ${chafa_escaped} --format symbols --animate off --size 60x60 -- \"\$1\""
+    elif [ -n "$CHAFA_BIN" ] && [ "$use_kitty_graphics" = "true" ]; then
+        printf -v chafa_escaped '%q' "$CHAFA_BIN"
+        preview_script="${preview_prefix}exec ${chafa_escaped} --format kitty --animate off --size 60x60 -- \"\$1\""
     elif [ -n "$CHAFA_BIN" ]; then
         printf -v chafa_escaped '%q' "$CHAFA_BIN"
-        preview_command="bash -c 'exec ${chafa_escaped} --format symbols --animate off --size 60x60 -- \"\$1\"' _ {1}"
+        preview_script="${preview_prefix}exec ${chafa_escaped} --format symbols --animate off --size 60x60 -- \"\$1\""
+    elif [ -n "$TIMG_BIN" ] && [ "$use_kitty_graphics" = "true" ]; then
+        printf -v timg_escaped '%q' "$TIMG_BIN"
+        preview_script="${preview_prefix}exec ${timg_escaped} -pk -g 60x60 --frames=1 -- \"\$1\""
     elif [ -n "$TIMG_BIN" ]; then
         printf -v timg_escaped '%q' "$TIMG_BIN"
-        preview_command="bash -c 'exec ${timg_escaped} -pq -g 60x60 -- \"\$1\"' _ {1}"
+        preview_script="${preview_prefix}exec ${timg_escaped} -pq -g 60x60 --frames=1 -- \"\$1\""
     else
-        preview_command="bash -c 'printf \"%s\n\" \"\$1\"' _ {1}"
+        preview_script="${preview_prefix}printf '%s\n' \"\$1\""
     fi
+
+    printf -v preview_command 'bash -c %q _ {1}' "$preview_script"
 
     if [ "$CliOnly" == "true" ]; then
         selected_row="$(
@@ -348,6 +389,10 @@ while [ $# -gt 0 ]; do
             PreferredPreview="timg"
             shift
             ;;
+        --kitty)
+            PreferKittyPreview="true"
+            shift
+            ;;
         *)
             if [[ "$option" == -* ]]; then
                 printf 'Unknown option: %s\n' "$option" >&2
@@ -378,11 +423,15 @@ fi
 mapfile -t Choices < <(printf '%s\n' "${Choices[@]}" | awk 'NF')
 
 SelectedRow="$(select_image)"
+
+if [ "$PreferKittyPreview" = "true" ] && is_kitty_terminal; then
+    printf '\033_Ga=d,d=A;\033\\\033[2J\033[H' >/dev/tty 2>/dev/null || true
+fi
 SelectedImage="$(printf '%s' "$SelectedRow" | awk -F $'\t' '{print $1}')"
 
 if [ -f "$SelectedImage" ]; then
     if [ -n "$DRAGON_BIN" ]; then
-        "$DRAGON_BIN" -a -x -- "$SelectedImage" &
+        "$DRAGON_BIN" -a -x "$SelectedImage" &
     fi
 
     if [ -n "$XCLIP_BIN" ] || [ -n "$COPYQ_BIN" ]; then
