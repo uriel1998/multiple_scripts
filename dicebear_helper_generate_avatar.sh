@@ -5,10 +5,43 @@
 #
 # This is a silly wrapper around a silly tool to make avatars. Feed it a seed, or not.
 
+usage() {
+	cat <<'EOF'
+Usage:
+  dicebear_helper_generate_avatar.sh [TEXT ...]
+  dicebear_helper_generate_avatar.sh --help
+
+Generates or reuses a cached avatar PNG and prints its path.
+
+Behavior:
+  - With no arguments, generates a random seed.
+  - With arguments, hashes the provided text into a deterministic seed.
+  - For new cached avatars, the online DiceBear API randomly uses either the
+    clay or critters style.
+  - If the API fetch fails and the local `dicebear` CLI is available, it falls
+    back to a local `bottts` render.
+
+Environment:
+  DICEBEAR_AVATAR_DIR
+    Cache directory for generated PNGs.
+
+  DICEBEAR_NO_CLIPBOARD=1
+    Skip clipboard and CopyQ updates.
+
+Output:
+  Prints the final PNG path on success.
+EOF
+}
+
 seed=""
 avatar_dir="${DICEBEAR_AVATAR_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/dicebear}"
 skip_clipboard="${DICEBEAR_NO_CLIPBOARD:-0}"
 api_style=""
+
+if [ "${1:-}" = "--help" ] || [ "${1:-}" = "-h" ]; then
+	usage
+	exit 0
+fi
 
 
 if [ "$#" -eq 0 ];then

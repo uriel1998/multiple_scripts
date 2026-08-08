@@ -93,10 +93,15 @@ for a full description of how to use this script.
 ## dicebear_helper_generate_avatar.sh
 
 Small helper for generating a deterministic avatar from a seed using DiceBear.
-It prefers the online DiceBear API, can fall back to a local `dicebear` CLI, and
-then copies the resulting avatar into the clipboard and CopyQ for easy reuse.
+It prefers the online DiceBear API, randomly using either the `clay` or
+`critters` style for new cached avatars, can fall back to a local `dicebear`
+CLI, and then copies the resulting avatar into the clipboard and CopyQ for easy
+reuse.
+
+Run `dicebear_helper_generate_avatar.sh --help` for the current usage summary.
 Set `DICEBEAR_AVATAR_DIR` if you want the cached PNGs written somewhere other
-than the default cache directory.
+than the default cache directory, and set `DICEBEAR_NO_CLIPBOARD=1` if you want
+to skip clipboard and CopyQ updates.
 
 ## vcf_add_missing_dicebear_avatars.sh
 
