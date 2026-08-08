@@ -6,8 +6,7 @@
 # This is a silly wrapper around a silly tool to make avatars. Feed it a seed, or not.
 
 seed=""
-SAVE_AVATARS=1
-# If you feed dicebear the same input, you'll get the same result.
+
 
 if [ "$#" -eq 0 ];then
 	#no input given, get random
@@ -24,13 +23,15 @@ mkdir -p "${avatar_dir}"
 if [ ! -f "${avatar_dir}/${seed}.png" ];then
 	# Try the online source with "clay" 
 
-	wget "https://api.dicebear.com/10.x/clay/svg?animationVariant=&backgroundColor=5e5c64,813d9c,613583,1c71d8,1a5fb4,26a269&borderRadius=23&backgroundColorAngle=-67&backgroundColorFillStops=2&size=512&seed=${seed}" -O "${avatar_dir}/${seed}.png"
+		if ! wget "https://api.dicebear.com/10.x/clay/png?animationVariant=&backgroundColor=5e5c64,813d9c,613583,1c71d8,1a5fb4,26a269&borderRadius=23&backgroundColorAngle=-67&backgroundColorFillStops=2&size=512&seed=${seed}" -O "${avatar_dir}/${seed}.png"; then
+		rm -f "${avatar_dir}/${seed}.png"
+	fi
 
 	# Okay, if that didn't work, then the local install with the robots one
 
 	if [ ! -f "${avatar_dir}/${seed}.png" ];then
-		if [ -f $(which dicebear) ];then
-			$(which dicebear) bottts "${avatar_dir}" --animationVariant --backgroundColor '5e5c64' '813d9c' '613583' '1c71d8' '1a5fb4' '26a269' --format png --seed "${seed}"
+		if command -v dicebear >/dev/null 2>&1; then
+			dicebear bottts "${avatar_dir}" --animationVariant --backgroundColor '5e5c64' '813d9c' '613583' '1c71d8' '1a5fb4' '26a269' --format png --seed "${seed}"
 			# note the name needs to match
 			mv "${avatar_dir}/bottts-0.png" "${avatar_dir}/${seed}.png"
 		fi
@@ -49,4 +50,3 @@ if [ -f "${avatar_dir}/${seed}.png" ];then
 	# Put the path in the second position with copyq
 	/usr/bin/copyq write 1 "${avatar_dir}/${seed}.png"
 fi
-
