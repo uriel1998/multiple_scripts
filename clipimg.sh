@@ -22,6 +22,10 @@ DRAGON_BIN="$(command -v dragon || true)"
 XCLIP_BIN="$(command -v xclip || true)"
 COPYQ_BIN="$(command -v copyq || true)"
 
+if [ -x "${HOME}/.local/bin/dragon" ]; then
+    DRAGON_BIN="${HOME}/.local/bin/dragon"
+fi
+
 CliOnly="true"
 PreferredPreview="auto"
 PreferKittyPreview="false"
@@ -110,6 +114,7 @@ display_help() {
     echo "# --chafa prefer chafa for previews."
     echo "# --timg prefer timg for previews."
     echo "# --kitty use kitty graphics previews when running in kitty."
+    echo "# Falls back to normal previews when not in kitty or inside tmux."
     echo "# --create-cache build ${CLIPIMG_CACHE_FILE} and exit."
     echo "# --path-only copy the selected file path as text instead of"
     echo "# image data to xclip and copyq."
@@ -122,6 +127,7 @@ display_help() {
     echo "# in the current directory or the script directory."
     echo "# Clipboard output uses any available combination of dragon,"
     echo "# xclip, and copyq."
+    echo "# Dragon is looked up in \$HOME/.local/bin/dragon before PATH."
     echo "###################################################################"
 }
 
@@ -135,6 +141,10 @@ is_kitty_terminal() {
     esac
 
     return 1
+}
+
+is_tmux_session() {
+    [ -n "${TMUX:-}" ]
 }
 
 stickerpack_requested() {
@@ -165,6 +175,15 @@ add_stickerpack_entry() {
 
     StickerPackNames+=("$entry_name")
     StickerPackPaths+=("$entry_path")
+}
+
+launch_dragon() {
+    local image_path="$1"
+
+    [ -n "$DRAGON_BIN" ] || return 0
+
+    nohup "$DRAGON_BIN" -a -x "$image_path" </dev/null >/dev/null 2>&1 &
+    disown 2>/dev/null || true
 }
 
 load_clipimg_env() {
@@ -310,6 +329,7 @@ create_cache() {
 select_image() {
     local preview_command=""
     local preview_script=""
+    local kitty_size_preamble=""
     local selected_row=""
     local selected_label=""
     local choice_row=""
@@ -321,12 +341,13 @@ select_image() {
 
     [ "${#Choices[@]}" -gt 0 ] || return 0
 
-    if [ "$PreferKittyPreview" = "true" ] && is_kitty_terminal; then
+    if [ "$PreferKittyPreview" = "true" ] && is_kitty_terminal && ! is_tmux_session; then
         use_kitty_graphics="true"
     fi
 
     if [ "$use_kitty_graphics" = "true" ]; then
         preview_prefix="printf '\033_Ga=d,d=A;\033\\' >/dev/tty 2>/dev/null || true; printf '\033[2J\033[H'; "
+        kitty_size_preamble='preview_cols="${FZF_PREVIEW_COLUMNS:-60}"; preview_lines="${FZF_PREVIEW_LINES:-60}"; preview_max_lines=$(( preview_lines * 80 / 100 )); if [ "$preview_max_lines" -lt 1 ]; then preview_max_lines=1; fi; '
     else
         preview_prefix="printf '\033[2J\033[H'; "
     fi
@@ -339,25 +360,25 @@ select_image() {
 
     if [ "$preview_order" = "timg-first" ] && [ -n "$TIMG_BIN" ] && [ "$use_kitty_graphics" = "true" ]; then
         printf -v timg_escaped '%q' "$TIMG_BIN"
-        preview_script="${preview_prefix}exec ${timg_escaped} -pk -g 60x60 --frames=1 -- \"\$1\""
+        preview_script="${preview_prefix}${kitty_size_preamble}exec ${timg_escaped} -pk -g \"\${preview_cols}x\${preview_max_lines}\" --frames=1 -- \"\$1\""
     elif [ "$preview_order" = "timg-first" ] && [ -n "$TIMG_BIN" ]; then
         printf -v timg_escaped '%q' "$TIMG_BIN"
         preview_script="${preview_prefix}exec ${timg_escaped} -pq -g 60x60 --frames=1 -- \"\$1\""
     elif [ "$preview_order" = "timg-first" ] && [ -n "$CHAFA_BIN" ] && [ "$use_kitty_graphics" = "true" ]; then
         printf -v chafa_escaped '%q' "$CHAFA_BIN"
-        preview_script="${preview_prefix}exec ${chafa_escaped} --format kitty --animate off --size 60x60 -- \"\$1\""
+        preview_script="${preview_prefix}${kitty_size_preamble}exec ${chafa_escaped} --format kitty --animate off --size \"\${preview_cols}x\${preview_max_lines}\" -- \"\$1\""
     elif [ "$preview_order" = "timg-first" ] && [ -n "$CHAFA_BIN" ]; then
         printf -v chafa_escaped '%q' "$CHAFA_BIN"
         preview_script="${preview_prefix}exec ${chafa_escaped} --format symbols --animate off --size 60x60 -- \"\$1\""
     elif [ -n "$CHAFA_BIN" ] && [ "$use_kitty_graphics" = "true" ]; then
         printf -v chafa_escaped '%q' "$CHAFA_BIN"
-        preview_script="${preview_prefix}exec ${chafa_escaped} --format kitty --animate off --size 60x60 -- \"\$1\""
+        preview_script="${preview_prefix}${kitty_size_preamble}exec ${chafa_escaped} --format kitty --animate off --size \"\${preview_cols}x\${preview_max_lines}\" -- \"\$1\""
     elif [ -n "$CHAFA_BIN" ]; then
         printf -v chafa_escaped '%q' "$CHAFA_BIN"
         preview_script="${preview_prefix}exec ${chafa_escaped} --format symbols --animate off --size 60x60 -- \"\$1\""
     elif [ -n "$TIMG_BIN" ] && [ "$use_kitty_graphics" = "true" ]; then
         printf -v timg_escaped '%q' "$TIMG_BIN"
-        preview_script="${preview_prefix}exec ${timg_escaped} -pk -g 60x60 --frames=1 -- \"\$1\""
+        preview_script="${preview_prefix}${kitty_size_preamble}exec ${timg_escaped} -pk -g \"\${preview_cols}x\${preview_max_lines}\" --frames=1 -- \"\$1\""
     elif [ -n "$TIMG_BIN" ]; then
         printf -v timg_escaped '%q' "$TIMG_BIN"
         preview_script="${preview_prefix}exec ${timg_escaped} -pq -g 60x60 --frames=1 -- \"\$1\""
@@ -372,7 +393,7 @@ select_image() {
             printf '%s\n' "${Choices[@]}" | fzf \
                 --exact \
                 --no-hscroll \
-                --height 80% \
+                --height 100% \
                 --border \
                 --ansi \
                 --no-bold \
@@ -462,14 +483,14 @@ mapfile -t Choices < <(printf '%s\n' "${Choices[@]}" | awk 'NF')
 
 SelectedRow="$(select_image)"
 
-if [ "$PreferKittyPreview" = "true" ] && is_kitty_terminal; then
+if [ "$PreferKittyPreview" = "true" ] && is_kitty_terminal && ! is_tmux_session; then
     printf '\033_Ga=d,d=A;\033\\\033[2J\033[H' >/dev/tty 2>/dev/null || true
 fi
 SelectedImage="$(printf '%s' "$SelectedRow" | awk -F $'\t' '{print $1}')"
 
 if [ -f "$SelectedImage" ]; then
     if [ "$PathOnly" != "true" ] && [ -n "$DRAGON_BIN" ]; then
-        "$DRAGON_BIN" -a -x "$SelectedImage" &
+        launch_dragon "$SelectedImage"
     fi
 
     if [ "$PathOnly" != "true" ] && { [ -n "$XCLIP_BIN" ] || [ -n "$COPYQ_BIN" ]; }; then

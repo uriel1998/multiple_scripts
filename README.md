@@ -53,18 +53,21 @@ and only supported image files are presented. Terminal previews currently prefer
 `chafa` in symbols mode with animation disabled, and fall back to `timg` in
 quarter-block mode; `--chafa` and `--timg` let you choose which previewer to
 prefer. Pass `--kitty` to request Kitty graphics previews when running inside a
-Kitty terminal; otherwise the script silently falls back to the normal preview
-mode. Use `--create-cache` to build an optional `.clipimg.cache` file next to
-the script; when that cache exists, normal runs reuse it instead of rescanning
-the configured stickerpack directories live. Cache builds are safe to run from
-cron: `--create-cache` prefers config files next to the script, writes the
-cache atomically through a temporary file, and does not depend on `dragon`
-being present in the cron environment.
+Kitty terminal; otherwise, or when running inside tmux, the script silently
+falls back to the normal preview mode. Use `--create-cache` to build an
+optional `.clipimg.cache` file next to the script; when that cache exists,
+normal runs reuse it instead of rescanning the configured stickerpack
+directories live. Cache builds are safe to run from cron: `--create-cache`
+prefers config files next to the script, writes the cache atomically through a
+temporary file, and does not depend on `dragon` being present in the cron
+environment.
 
 For output, the script will use any available combination of `dragon`, `xclip`,
 and `copyq`. In normal mode, `copyq` receives both the image payload and the
 file path in slot 1. With `--path-only`, the script skips `dragon` and sends
-only the selected full file path as text to `xclip` and `copyq`.
+only the selected full file path as text to `xclip` and `copyq`. For launcher
+environments with a reduced `PATH`, `clipimg.sh` explicitly checks
+`${HOME}/.local/bin/dragon` before falling back to `PATH` lookup.
 
 ## clean_identicons_vcards.sh
 
