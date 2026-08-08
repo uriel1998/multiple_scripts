@@ -1,12 +1,6 @@
 #!/bin/bash
 
-#!/bin/bash
-export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+set -euo pipefail
 
-package=$(echo "${@}" | awk -F '/' '{ print $1 }')
-echo "${package}"
-echo " "
-apt show "${package}" 2>/dev/null
-echo " "
-dpkg -S "${package}"
-
+script_dir="$(dirname "$(readlink -f "$0")")"
+exec "$script_dir/aptlist" __preview "${1:-}"

@@ -9,10 +9,11 @@ but it now covers the scripts that currently live at the root of this repository
 
 Because sometimes I want to see what packages are installed or available quickly.
 Use `-i` to have it auto-sub in `[installed]` to the `fzf` search string. It also
-uses `dpkg` search to list what the package installs.
+shows package metadata and, when the package is installed, the file list from
+`dpkg -L`.
 
-`aptlist-preview.sh` is the preview helper for this script. It formats the package
-details shown in the `fzf` preview pane.
+`aptlist-preview.sh` remains as a small compatibility shim, but the preview logic
+now lives directly in `aptlist`.
 
 ## books_search.sh
 

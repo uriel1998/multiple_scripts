@@ -1,16 +1,56 @@
 #!/bin/bash
 
-export SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
-ONLY_INSTALLED=0
-QUERY=""
+set -euo pipefail
 
-if [[ "$@" =~ "-i" ]]; then
-    ONLY_INSTALLED=1
-    QUERY=$(echo "${@}" | sed 's/-i/[installed]/')
-else
-    QUERY="${@}"
+script_path="$(readlink -f "$0")"
+query_parts=()
+only_installed=0
+
+normalize_package() {
+    local package_line="${1:-}"
+
+    package_line="${package_line%%/*}"
+    printf '%s\n' "$package_line"
+}
+
+show_preview() {
+    local package
+
+    package="$(normalize_package "${1:-}")"
+    [ -n "$package" ] || exit 0
+
+    printf '%s\n\n' "$package"
+    apt show "$package" 2>/dev/null || true
+    printf '\n'
+
+    if dpkg-query -W -f='${db:Status-Abbrev}\n' "$package" 2>/dev/null | grep -q '^ii'; then
+        dpkg -L "$package" 2>/dev/null || true
+    else
+        printf 'Package is not currently installed, so no local file list is available.\n'
+    fi
+}
+
+if [ "${1:-}" = "__preview" ]; then
+    show_preview "${2:-}"
+    exit 0
 fi
 
-apt list 2>/dev/null | fzf -i -m -q "${QUERY}" --preview="${SCRIPT_DIR}/aptlist-preview.sh {}"
+for arg in "$@"; do
+    if [ "$arg" = "-i" ]; then
+        only_installed=1
+        continue
+    fi
+    query_parts+=("$arg")
+done
 
+query="${query_parts[*]:-}"
+if [ "$only_installed" -eq 1 ]; then
+    query="[installed]"
+    if [ -n "${query_parts[*]:-}" ]; then
+        query+=" ${query_parts[*]}"
+    fi
+fi
+
+preview_command="$(printf '%q __preview {}' "$script_path")"
+apt list 2>/dev/null | fzf -i -m -q "$query" --preview "$preview_command"
 
