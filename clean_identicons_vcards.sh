@@ -145,7 +145,6 @@ is_supported_image() {
 build_photo_block() {
     local image_file="$1"
     local mime_type="$2"
-    local encoded
     local photo_type
 
     case "$mime_type" in
@@ -155,14 +154,15 @@ build_photo_block() {
         *) return 1 ;;
     esac
 
-    encoded="$(base64 -w 0 "$image_file")"
-    printf 'PHOTO;ENCODING=B;TYPE=%s;VALUE=BINARY:%s\n' "$photo_type" "${encoded:0:75}"
-    encoded="${encoded:75}"
-
-    while [ -n "$encoded" ]; do
-        printf ' %s\n' "${encoded:0:74}"
-        encoded="${encoded:74}"
-    done
+    base64 -w 74 "$image_file" | awk -v photo_type="$photo_type" '
+        NR == 1 {
+            printf "PHOTO;ENCODING=B;TYPE=%s;VALUE=BINARY:%s\n", photo_type, $0
+            next
+        }
+        {
+            printf " %s\n", $0
+        }
+    '
 }
 
 is_likely_placeholder() {
