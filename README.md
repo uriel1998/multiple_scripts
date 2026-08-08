@@ -5,6 +5,12 @@ This is often a repository where I work on small ideas until they're big enough
 to deserve their own repo and README. This README may still lag behind the code,
 but it now covers the scripts that currently live at the root of this repository.
 
+Annotated git tags in this repository are used as historical audit markers.
+While the project is still pre-1.0, tags follow semantic-version ordering:
+minor releases mark root-level script additions, removals, or fundamental
+workflow changes, while patch releases are reserved for follow-up maintenance
+or documentation-only milestones when they are tagged at all.
+
 ## aptlist
 
 Because sometimes I want to see what packages are installed or available quickly.
