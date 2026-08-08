@@ -79,6 +79,26 @@ for a full description of how to use this script.
 Small helper for generating a deterministic avatar from a seed using DiceBear.
 It prefers the online DiceBear API, can fall back to a local `dicebear` CLI, and
 then copies the resulting avatar into the clipboard and CopyQ for easy reuse.
+Set `DICEBEAR_AVATAR_DIR` if you want the cached PNGs written somewhere other
+than the default cache directory.
+
+## vcf_add_missing_dicebear_avatars.sh
+
+Scans a directory of `.vcf` files, skips cards that already have a `PHOTO`,
+builds a seed from the available `FN`, `EMAIL`, `TEL`, and `ORG` fields,
+generates a DiceBear avatar, and embeds it into the card.
+
+It also adds `X-DICEBEAR-GENERATED:TRUE` and
+`X-DICEBEAR-SOURCE:dicebear_helper_generate_avatar.sh` so the generated avatars
+can be identified and removed later. Pass a contacts directory explicitly, or
+let it scan the current working directory. `--help` shows the current options.
+
+## vcf_remove_dicebear_avatars.sh
+
+Reverses the generated-avatar workflow for marked vCards. It looks for the
+DiceBear marker fields, removes them, and strips the embedded `PHOTO` block
+from those cards only. Pass a contacts directory explicitly, or let it scan the
+current working directory. `--help` shows the current options.
 
 ## drag-out-of-obsidian.sh
 
@@ -103,11 +123,11 @@ The root of my vaults are symlinked into `${HOME}/vault`, for example:
 `/vault/Writing`
 
 That allows for consistent rewriting even though they live in very different
-parts of my file structure. You will want to replace the
-`\/home\/steven\/vault\/` with the equally escaped directory that you moved or
-symlinked all your vaults to.
+parts of my file structure. You will want to replace the escaped vault root
+with the equally escaped directory that you moved or symlinked all your vaults
+to.
 
-`sed 's|obsidian:\/\/open?vault=|\/home\/steven\/vault\/|g' | sed -e 's/%2F/\//g' -e 's/%20/ /g'`
+`sed 's|obsidian:\/\/open?vault=|\/path\/to\/vault\/|g' | sed -e 's/%2F/\//g' -e 's/%20/ /g'`
 
 Use the Shell Commands plugin to invoke it, and optionally the Commander plugin
 to add an icon to the ribbon or similar.

@@ -94,8 +94,8 @@ process_a_path () {
             ;;
         -b|--base) 
             # gets the base dir to remove from pathname when copying
-            # e.g.  /home/steven/music/album/artist/file
-            # with a BASE of /home/steven/music
+            # e.g.  /path/to/music/album/artist/file
+            # with a BASE of /path/to/music
             # would result in the path /album/artist/file being copied
             # as the path of the copied file
             shift
@@ -224,4 +224,3 @@ process_a_path () {
 
 # todo - clobber only if size/date differs?        
 # todo - conversion for old 8.3 formats? Would require extra deduplication code tho    
-
