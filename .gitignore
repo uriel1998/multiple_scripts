@@ -3,6 +3,7 @@
 foliate/
 moon/
 .clipimg.env
+.clipimg.cache
 
 # Local agent metadata
 .codex
