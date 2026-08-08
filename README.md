@@ -300,3 +300,9 @@ lists instead.
 A wrapper for `youtube-dl` to make downloading or playing things easier and more
 automated. It can take a URL directly, pull one from the clipboard, or prompt
 through `zenity`, and supports video download, audio download, or playback.
+
+## Some AI/LLM Use
+
+![button_some-ai-used](https://i.imgur.com/rmiLFDD.png)
+
+The code in this repository has been to some degree written or altered by an AI tool with human supervision.  This may include one or more of the following: documentation, locating bugs, or commit messages; in this repository it's been used for bug squashing and reorganizing and updating the documentation.  
