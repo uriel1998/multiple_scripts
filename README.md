@@ -16,7 +16,8 @@ details shown in the `fzf` preview pane.
 
 ## books_search.sh
 
-Interactive helper for searching a local book collection from the terminal.  Superceded by [books_browse](https://github.com/uriel1998/books_browse). 
+Interactive helper for searching a local book collection from the terminal.
+Superceded by [books_browse](https://github.com/uriel1998/books_browse).
 
 ## briefing.sh
 
@@ -228,21 +229,6 @@ and opens it in `mpv` with the correct current seek offset.
 
 Very simple PS1 helper functions to show when a git directory needs work and to
 shorten the home path shown in the prompt.
-
-## pulse-fzf-autoconf
-
-Helper script for moving and manipulating PulseAudio or PipeWire streams with an
-interactive picker flow. See
-https://ideatrash.net/2022/02/manipulating-audio-and-video-streams-for-streaming-on-linux.html
-
-## rename-pane
-
-Tiny tmux helper that renames the current pane from the shell.
-
-## sbagen_select.sh
-
-Interactive helper for selecting and running `sbagen` sessions from the command
-line.
 
 ## set-xwindow-icon-by-pid.sh
 
