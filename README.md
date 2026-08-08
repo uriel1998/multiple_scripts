@@ -34,14 +34,15 @@ Amazon or Apple. The post detailing this is at
 
 ## clipimg.sh
 
-Uses `fzf` or `rofi` to choose a sticker, icon, or clipart image, then puts it
-onto the clipboard for pasting. By default it builds its list from uncommented
-entries under `[StickerPacks]` in `clipimg` config, with each pack defined as
-`Name:/full/path/to/pack`.
+Uses `fzf` or `rofi` to choose an image from configured stickerpacks, then puts
+it onto the clipboard for pasting. By default it builds its list from
+uncommented entries under `[StickerPacks]` in `clipimg` config, with each pack
+defined as `Name:/full/path/to/pack`.
 
 The script will look for config in the current working directory or in the same
 directory as the script, using `.clipimg.env`, `clipimg.ini`, or `.clipimg.ini`.
-Icons and clipart are configured separately under `[Icons]` and `[ClipArt]`.
+If you still want old icon or clipart directories included, point stickerpack
+entries at those directories in the env file instead of using separate sections.
 
 You can pass sticker-pack names on the command line to limit the picker to those
 packs only, for example `clipimg.sh blob` or `clipimg.sh blob blob2`. If you do
@@ -53,11 +54,14 @@ and only supported image files are presented. Terminal previews currently prefer
 quarter-block mode; `--chafa` and `--timg` let you choose which previewer to
 prefer. Pass `--kitty` to request Kitty graphics previews when running inside a
 Kitty terminal; otherwise the script silently falls back to the normal preview
-mode.
+mode. Use `--create-cache` to build an optional `.clipimg.cache` file next to
+the script; when that cache exists, normal runs reuse it instead of rescanning
+the configured stickerpack directories live.
 
 For output, the script will use any available combination of `dragon`, `xclip`,
-and `copyq`. When present, `copyq` receives both the image payload and the file
-path in slot 1.
+and `copyq`. In normal mode, `copyq` receives both the image payload and the
+file path in slot 1. With `--path-only`, the script skips `dragon` and sends
+only the selected full file path as text to `xclip` and `copyq`.
 
 ## clean_identicons_vcards.sh
 

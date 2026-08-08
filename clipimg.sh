@@ -6,12 +6,13 @@
 #  By Steven Saus
 #  (c) 2020; licensed under the MIT license
 #
-#  Uses fzf or rofi to choose a sticker, icon, or clipart image from a list,
+#  Uses fzf or rofi to choose an image from configured stickerpack lists,
 #  then copies it to the clipboard and selects it for pasting.
 ##############################################################################
 
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 CLIPIMG_ENV_FILE=""
+CLIPIMG_CACHE_FILE="${SCRIPT_DIR}/.clipimg.cache"
 
 FD_FIND="$(command -v fdfind || true)"
 FD_ALT="$(command -v fd || true)"
@@ -21,14 +22,11 @@ DRAGON_BIN="$(command -v dragon || true)"
 XCLIP_BIN="$(command -v xclip || true)"
 COPYQ_BIN="$(command -v copyq || true)"
 
-IconPath=""
-ClipartPath=""
 CliOnly="true"
 PreferredPreview="auto"
 PreferKittyPreview="false"
-UseStickerPacks="true"
-UseIcons="false"
-UseClipart="false"
+CreateCacheOnly="false"
+PathOnly="false"
 Choices=()
 StickerPackNames=()
 StickerPackPaths=()
@@ -96,12 +94,15 @@ display_help() {
     echo "#  clipimg.sh [-h|--help] [stickerpack ...]"
     echo "# -h, --help  show help"
     echo "# -g GUI interface only. Default is CLI/TUI."
-    echo "# -a select clipart only. Not selected by default."
-    echo "# -i select icon only. Not selected by default."
     echo "# --chafa prefer chafa for previews."
     echo "# --timg prefer timg for previews."
     echo "# --kitty use kitty graphics previews when running in kitty."
+    echo "# --create-cache build ${CLIPIMG_CACHE_FILE} and exit."
+    echo "# --path-only copy the selected file path as text instead of"
+    echo "# image data to xclip and copyq."
     echo "# By default, uncommented entries under [StickerPacks] are used."
+    echo "# If you want old icon or clipart directories included, point a"
+    echo "# stickerpack entry at those directories in the env file."
     echo "# Positional stickerpack names restrict selection to matching packs."
     echo "# Example: clipimg.sh blob blob2"
     echo "# Config is read from .clipimg.env, clipimg.ini, or .clipimg.ini"
@@ -182,26 +183,6 @@ load_clipimg_env() {
                     add_stickerpack_entry "$key" "$value"
                 fi
                 ;;
-            icons)
-                if [[ "$trimmed_line" == *=* ]]; then
-                    key="$(trim_whitespace "${trimmed_line%%=*}")"
-                    value="$(trim_whitespace "${trimmed_line#*=}")"
-                    value="$(strip_surrounding_quotes "$value")"
-                    if [[ "${key,,}" == "iconpath" ]]; then
-                        IconPath="$value"
-                    fi
-                fi
-                ;;
-            clipart)
-                if [[ "$trimmed_line" == *=* ]]; then
-                    key="$(trim_whitespace "${trimmed_line%%=*}")"
-                    value="$(trim_whitespace "${trimmed_line#*=}")"
-                    value="$(strip_surrounding_quotes "$value")"
-                    if [[ "${key,,}" == "clipartpath" ]]; then
-                        ClipartPath="$value"
-                    fi
-                fi
-                ;;
         esac
     done < "$CLIPIMG_ENV_FILE"
 }
@@ -210,6 +191,7 @@ build_search_items() {
     local search_label="$1"
     local search_path="$2"
     local display_mode="$3"
+    local cache_output_file="${4:-}"
     local -a extensions=()
     local -a finder_args=()
     local path
@@ -246,7 +228,11 @@ build_search_items() {
                 ;;
         esac
 
-        Choices+=("${path}"$'\t'"${display_path}")
+        if [ -n "$cache_output_file" ]; then
+            printf '%s\t%s\t%s\t%s\n' "$path" "$display_path" "$display_mode" "$search_label" >> "$cache_output_file"
+        else
+            Choices+=("${path}"$'\t'"${display_path}")
+        fi
     done < <(
         if [ -n "$FD_FIND" ]; then
             "$FD_FIND" -a "${finder_args[@]}" . "$search_root"
@@ -262,6 +248,49 @@ build_search_items() {
             \)
         fi
     )
+}
+
+choice_allowed() {
+    local display_mode="$1"
+    local search_label="$2"
+
+    case "$display_mode" in
+        stickerpack)
+            stickerpack_requested "$search_label"
+            return $?
+            ;;
+    esac
+
+    return 1
+}
+
+load_choices_from_cache() {
+    local cache_file="$1"
+    local cache_path
+    local cache_display
+    local cache_mode
+    local cache_label
+
+    [ -f "$cache_file" ] || return 1
+
+    while IFS=$'\t' read -r cache_path cache_display cache_mode cache_label; do
+        [ -n "$cache_path" ] || continue
+        [ -f "$cache_path" ] || continue
+        choice_allowed "$cache_mode" "$cache_label" || continue
+        Choices+=("${cache_path}"$'\t'"${cache_display}")
+    done < "$cache_file"
+}
+
+create_cache() {
+    local cache_file="$CLIPIMG_CACHE_FILE"
+
+    : > "$cache_file"
+
+    for i in "${!StickerPackNames[@]}"; do
+        build_search_items "${StickerPackNames[$i]}" "${StickerPackPaths[$i]}" "stickerpack" "$cache_file"
+    done
+
+    printf 'Wrote cache to %s\n' "$cache_file"
 }
 
 select_image() {
@@ -365,18 +394,6 @@ while [ $# -gt 0 ]; do
             display_help
             exit 0
             ;;
-        -a)
-            UseStickerPacks="false"
-            UseIcons="false"
-            UseClipart="true"
-            shift
-            ;;
-        -i)
-            UseStickerPacks="false"
-            UseIcons="true"
-            UseClipart="false"
-            shift
-            ;;
         -g)
             CliOnly="false"
             shift
@@ -393,6 +410,14 @@ while [ $# -gt 0 ]; do
             PreferKittyPreview="true"
             shift
             ;;
+        --create-cache)
+            CreateCacheOnly="true"
+            shift
+            ;;
+        --path-only)
+            PathOnly="true"
+            shift
+            ;;
         *)
             if [[ "$option" == -* ]]; then
                 printf 'Unknown option: %s\n' "$option" >&2
@@ -405,19 +430,18 @@ while [ $# -gt 0 ]; do
     esac
 done
 
-if [ "$UseStickerPacks" == "true" ]; then
+if [ "$CreateCacheOnly" = "true" ]; then
+    create_cache
+    exit 0
+fi
+
+if [ -f "$CLIPIMG_CACHE_FILE" ]; then
+    load_choices_from_cache "$CLIPIMG_CACHE_FILE"
+else
     for i in "${!StickerPackNames[@]}"; do
         stickerpack_requested "${StickerPackNames[$i]}" || continue
         build_search_items "${StickerPackNames[$i]}" "${StickerPackPaths[$i]}" "stickerpack"
     done
-fi
-
-if [ "$UseClipart" == "true" ] && [ -n "$ClipartPath" ]; then
-    build_search_items "clipart" "$ClipartPath" "clipart"
-fi
-
-if [ "$UseIcons" == "true" ] && [ -n "$IconPath" ]; then
-    build_search_items "icon" "$IconPath" "icon"
 fi
 
 mapfile -t Choices < <(printf '%s\n' "${Choices[@]}" | awk 'NF')
@@ -430,22 +454,31 @@ fi
 SelectedImage="$(printf '%s' "$SelectedRow" | awk -F $'\t' '{print $1}')"
 
 if [ -f "$SelectedImage" ]; then
-    if [ -n "$DRAGON_BIN" ]; then
+    if [ "$PathOnly" != "true" ] && [ -n "$DRAGON_BIN" ]; then
         "$DRAGON_BIN" -a -x "$SelectedImage" &
     fi
 
-    if [ -n "$XCLIP_BIN" ] || [ -n "$COPYQ_BIN" ]; then
+    if [ "$PathOnly" != "true" ] && { [ -n "$XCLIP_BIN" ] || [ -n "$COPYQ_BIN" ]; }; then
         mime="$(mimetype -- "$SelectedImage" | awk -F ': ' '{print $2}')"
     fi
 
     if [ -n "$XCLIP_BIN" ]; then
-        "$XCLIP_BIN" -i -selection primary -t "$mime" < "$SelectedImage" > /dev/null
-        "$XCLIP_BIN" -i -selection clipboard -t "$mime" < "$SelectedImage" > /dev/null
+        if [ "$PathOnly" = "true" ]; then
+            printf '%s' "$SelectedImage" | "$XCLIP_BIN" -i -selection primary -t text/plain > /dev/null
+            printf '%s' "$SelectedImage" | "$XCLIP_BIN" -i -selection clipboard -t text/plain > /dev/null
+        else
+            "$XCLIP_BIN" -i -selection primary -t "$mime" < "$SelectedImage" > /dev/null
+            "$XCLIP_BIN" -i -selection clipboard -t "$mime" < "$SelectedImage" > /dev/null
+        fi
     fi
 
     if [ -n "$COPYQ_BIN" ]; then
-        "$COPYQ_BIN" write 0 "$mime" - < "$SelectedImage"
-        "$COPYQ_BIN" write 1 "$SelectedImage"
+        if [ "$PathOnly" = "true" ]; then
+            "$COPYQ_BIN" write 0 text/plain "$SelectedImage"
+        else
+            "$COPYQ_BIN" write 0 "$mime" - < "$SelectedImage"
+            "$COPYQ_BIN" write 1 "$SelectedImage"
+        fi
         "$COPYQ_BIN" select 0
     fi
 fi
