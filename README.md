@@ -42,7 +42,12 @@ not name any packs, it includes every uncommented sticker pack from the config.
 Sticker selections are shown as `PackName:filename`, such as `Blob2:angry mad`,
 and only supported image files are presented. Terminal previews currently prefer
 `chafa` in symbols mode with animation disabled, and fall back to `timg` in
-quarter-block mode.
+quarter-block mode; `--chafa` and `--timg` let you choose which previewer to
+prefer.
+
+For output, the script will use any available combination of `dragon`, `xclip`,
+and `copyq`. When present, `copyq` receives both the image payload and the file
+path in slot 1.
 
 ## cont-stop.sh
 

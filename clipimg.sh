@@ -18,6 +18,8 @@ FD_ALT="$(command -v fd || true)"
 TIMG_BIN="$(command -v timg || true)"
 CHAFA_BIN="$(command -v chafa || true)"
 DRAGON_BIN="$(command -v dragon || true)"
+XCLIP_BIN="$(command -v xclip || true)"
+COPYQ_BIN="$(command -v copyq || true)"
 
 IconPath=""
 ClipartPath=""
@@ -102,6 +104,8 @@ display_help() {
     echo "# Example: clipimg.sh blob blob2"
     echo "# Config is read from .clipimg.env, clipimg.ini, or .clipimg.ini"
     echo "# in the current directory or the script directory."
+    echo "# Clipboard output uses any available combination of dragon,"
+    echo "# xclip, and copyq."
     echo "###################################################################"
 }
 
@@ -378,16 +382,21 @@ SelectedImage="$(printf '%s' "$SelectedRow" | awk -F $'\t' '{print $1}')"
 
 if [ -f "$SelectedImage" ]; then
     if [ -n "$DRAGON_BIN" ]; then
-        "$DRAGON_BIN" -a -x "$SelectedImage" &
-    else
-        mime="$(mimetype "$SelectedImage" | awk -F ': ' '{print $2}')"
-        xclip -i -selection primary -t "$mime" < "$SelectedImage" > /dev/null
-        xclip -i -selection clipboard -t "$mime" < "$SelectedImage" > /dev/null
-        /usr/bin/copyq write 0 "$mime" - < "$SelectedImage"
-        /usr/bin/copyq select 0
-        if [ "$UseIcons" == "true" ] || [ "$UseClipart" == "true" ]; then
-            /usr/bin/copyq insert 1 "$SelectedImage"
-            /usr/bin/copyq select 0
-        fi
+        "$DRAGON_BIN" -a -x -- "$SelectedImage" &
+    fi
+
+    if [ -n "$XCLIP_BIN" ] || [ -n "$COPYQ_BIN" ]; then
+        mime="$(mimetype -- "$SelectedImage" | awk -F ': ' '{print $2}')"
+    fi
+
+    if [ -n "$XCLIP_BIN" ]; then
+        "$XCLIP_BIN" -i -selection primary -t "$mime" < "$SelectedImage" > /dev/null
+        "$XCLIP_BIN" -i -selection clipboard -t "$mime" < "$SelectedImage" > /dev/null
+    fi
+
+    if [ -n "$COPYQ_BIN" ]; then
+        "$COPYQ_BIN" write 0 "$mime" - < "$SelectedImage"
+        "$COPYQ_BIN" write 1 "$SelectedImage"
+        "$COPYQ_BIN" select 0
     fi
 fi
