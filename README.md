@@ -1,79 +1,170 @@
 # multiple_scripts
-Multiple scripts that are useful but don't deserve their own repository.  
+Multiple scripts that are useful but don't deserve their own repository.
 
-This is often a repository when I work on small ideas until they're big enough 
-to deserve thier own repo and README.  This readme may very well be outdated 
-or inaccurate!  
-
-## drag-out-of-obsidian.sh
-
- There are a lot of ways to get content *into* Obsidian, but sometimes I want 
- to pull an image or file and drag-and-drop it into Element, Discord, whatever. 
- However, that reveals the Obsidian URI to some (all?) applications, not the 
- filename, making the operation fail. This is a workaround.
- 
- This uses [Dragon](https://github.com/mwh/dragon) to provide the drag and drop
- target.
-
- Usage - call `drag-out-of-obsidian.sh` (using the Shell Commands plugin), then 
- drag whatever from Obsidian to the target. It will then process the provided Obsidian 
- URL, provide the file name to a SECOND instance of Dragon (after making sure it 
- is escaped to deal with spaces), which will give you a target to drop on 
- your other application.
-
- The root of my vaults are symlinked into ${HOME}/vault, e.g.
-
-   /vault/Brain
-   /vault/DnD5e
-   /vault/Writing
- 
- thus allowing for consistent rewriting even though they live in very different
- parts of my file structure. You will want to replace the `\/home\/steven\/vault\/` 
- with the *equally escaped* directory that you moved or symlinked all your vaults to.
- 
-`sed 's|obsidian:\/\/open?vault=|\/home\/steven\/vault\/|g' | sed -e 's/%2F/\//g' -e 's/%20/ /g'`
-
- Use the Shell Commands plugin to invoke, optionally use Commander plugin to add 
- an icon to the ribbon or somesuch.
-
- You *may* need to add the $PATH variables to Shell Commands, depending on where 
- you have the dragon binary located.
-
-Examples: 
-I can drag to Thunar, not Discord... but this script fixes it.
-
-![Example 1](https://i.imgur.com/YPNV1Xd.gif "What it looks like")
-
-I can't drag to upload to imgur... but this script fixes it.
-![Example 2](https://i.imgur.com/uxWb9sM.gif "What it looks like")
-
-
-## convert_patreon_downloader_files.sh
-
-See [this post on my blog](https://ideatrash.net/2023/12/how-to-back-up-your-patreon-posts-and-photos-to-multiple-formats-automatically-using-linux-in-december-2023.html) for a full description of how to use this script.
-
-## isobash
-
-A simple script using zenity and pkexec to allow for interactive mounting of ISO files with a GUI interface.
+This is often a repository where I work on small ideas until they're big enough
+to deserve their own repo and README. This README may still lag behind the code,
+but it now covers the scripts that currently live at the root of this repository.
 
 ## aptlist
 
-Because sometimes I want to see what packages are installed or available quickly.  Use -i to have it auto-sub in [installed] to the fzf search string. Also uses dpkg search to list what the package installs.
+Because sometimes I want to see what packages are installed or available quickly.
+Use `-i` to have it auto-sub in `[installed]` to the `fzf` search string. It also
+uses `dpkg` search to list what the package installs.
 
+`aptlist-preview.sh` is the preview helper for this script. It formats the package
+details shown in the `fzf` preview pane.
 
-## video-fzf-config and pulse-fzf-autoconf
+## books_search.sh
 
-Scripts for moving and manipulating video and pulse streams easily.  See https://ideatrash.net/2022/02/manipulating-audio-and-video-streams-for-streaming-on-linux.html
+Interactive helper for searching a local book collection from the terminal.  Superceded by [books_browse](https://github.com/uriel1998/books_browse). 
 
-# patootie.sh
+## briefing.sh
 
-  Because sometimes you want a GUI *and* the speed of a command line, and just want to say something stupid on Mastodon/Bluesky without firing up a browser or Sengi or grabbing your phone, or or or...
+Used along with Podfox to create a daily briefing without involving Google or
+Amazon or Apple. The post detailing this is at
+[ideatrash](https://ideatrash.net/?p=69528).
 
-  Uses [YAD](https://sourceforge.net/projects/yad-dialog/) and [toot](https://toot.bezdomni.net/) [bsky-sh-cli](https://github.com/bills-appworks/bsky-sh-cli) to have a GUI for sending a quick post (with possible image attachments, content warnings, and alt text. Includes interactive image selector and *displaying* the image while you are presented with a dialogue box to enter alt text.
+## clipimg.sh
 
-  Because `bsky-sh-cli` tends to log out of the session, create a short script somewhere in `$PATH` called `loginbsky`.  Mine, for example, looks something like this:
+Uses `fzf`, `rofi`, `fd` (optional), and `xclip` to choose an image, get it onto
+the clipboard, and select it for pasting. Works for JPG and PNG, and does not
+work for GIF.
 
-```
+## cont-stop.sh
+
+Process workbench script for inspecting running processes and preparing stop,
+continue, or kill style actions. This one looks more experimental than polished,
+but it is kept here because it is still part of the root script set.
+
+## convert_odt_md_for_obsidian.sh
+
+Converts ODT and RTF files into Markdown and moves the original files into an
+archive directory. It is intended to make importing documents into Obsidian less
+annoying.
+
+## convert_patreon_downloader_files.sh
+
+See [this post on my blog](https://ideatrash.net/2023/12/how-to-back-up-your-patreon-posts-and-photos-to-multiple-formats-automatically-using-linux-in-december-2023.html)
+for a full description of how to use this script.
+
+## dicebear_helper_generate_avatar.sh
+
+Small helper for generating a deterministic avatar from a seed using DiceBear.
+It prefers the online DiceBear API, can fall back to a local `dicebear` CLI, and
+then copies the resulting avatar into the clipboard and CopyQ for easy reuse.
+
+## drag-out-of-obsidian.sh
+
+There are a lot of ways to get content *into* Obsidian, but sometimes I want to
+pull an image or file and drag-and-drop it into Element, Discord, whatever.
+However, that reveals the Obsidian URI to some or all applications, not the
+filename, making the operation fail. This is a workaround.
+
+This uses [Dragon](https://github.com/mwh/dragon) to provide the drag and drop
+target.
+
+Usage: call `drag-out-of-obsidian.sh` from the Shell Commands plugin, then drag
+whatever from Obsidian to the target. It will process the provided Obsidian URL,
+provide the file name to a second instance of Dragon after making sure it is
+escaped to deal with spaces, and then give you a target to drop on your other
+application.
+
+The root of my vaults are symlinked into `${HOME}/vault`, for example:
+
+`/vault/Brain`
+`/vault/DnD5e`
+`/vault/Writing`
+
+That allows for consistent rewriting even though they live in very different
+parts of my file structure. You will want to replace the
+`\/home\/steven\/vault\/` with the equally escaped directory that you moved or
+symlinked all your vaults to.
+
+`sed 's|obsidian:\/\/open?vault=|\/home\/steven\/vault\/|g' | sed -e 's/%2F/\//g' -e 's/%20/ /g'`
+
+Use the Shell Commands plugin to invoke it, and optionally the Commander plugin
+to add an icon to the ribbon or similar.
+
+You may need to add the `$PATH` variables to Shell Commands, depending on where
+you have the Dragon binary located.
+
+Examples:
+I can drag to Thunar, not Discord, but this script fixes it.
+
+![Example 1](https://i.imgur.com/YPNV1Xd.gif "What it looks like")
+
+I can't drag to upload to imgur, but this script fixes it.
+
+![Example 2](https://i.imgur.com/uxWb9sM.gif "What it looks like")
+
+## dtcopy.sh
+
+Provides a way to copy filenames with complex characters to an older filesystem,
+such as NTFS. It can copy or move files, preserve part of the directory layout,
+and transliterate path segments so the target filesystem has an easier time with
+them.
+
+## fin_clip.sh
+
+Small clipboard utility for forcing the current selection or provided content into
+the clipboard when the normal copy path is being obnoxious.
+
+## fix_tags_from_old_comments.sh
+
+Bulk cleanup helper for Markdown and text files. It fixes old tag markers that
+were written without the expected spacing.
+
+## isobash
+
+A simple script using `zenity` and `pkexec` to allow for interactive mounting of
+ISO files with a GUI interface.
+
+## kpf.sh
+
+Uses [fd](https://github.com/sharkdp/fd), [fzf](https://github.com/junegunn/fzf),
+and [keepassxc-cli](https://www.mankier.com/1/keepassxc-cli) to provide a quick
+and easy way to *retrieve* passwords from the command line. By default it copies
+the password to the clipboard. If you don't want to type your password or select
+your database location every time, you can set them as environment variables.
+
+See [this post](https://ideatrash.net/2021/05/kpf-keepassxc-with-fzf-in-bash.html)
+for details.
+
+## lowload.sh
+
+Gets some of the functionality of `atd` and task-spooler together. It waits until
+system load drops below a configured threshold and then runs the labeled job via
+`tsp`.
+
+## mu-search.sh
+
+Interactive front-end for `mu` mail searches. It prompts for the query and then
+helps normalize the common `subject:`, `from:`, `to:`, `body:`, and similar field
+patterns before running the search.
+
+## openaudible_to_audiobookshelf.sh
+
+Takes downloaded audiobooks from OpenAudible and copies or links them into the
+directory structure that Audiobookshelf expects.
+
+## patootie.sh
+
+Because sometimes you want a GUI *and* the speed of a command line, and just want
+to say something stupid on Mastodon or Bluesky without firing up a browser or
+Sengi or grabbing your phone.
+
+Uses [YAD](https://sourceforge.net/projects/yad-dialog/),
+[toot](https://toot.bezdomni.net/), and
+[bsky-sh-cli](https://github.com/bills-appworks/bsky-sh-cli) to provide a GUI
+for sending a quick post with possible image attachments, content warnings, and
+alt text. It includes an interactive image selector and displays the image while
+you are presented with a dialogue box to enter alt text.
+
+Because `bsky-sh-cli` tends to log out of the session, create a short script
+somewhere in `$PATH` called `loginbsky`. Mine, for example, looks something like
+this:
+
+```bash
 #!/usr/bin/bash
 
 export BSKYSHCLI_SELFHOSTED_DOMAIN=sky.example.com
@@ -81,97 +172,119 @@ bsky login --handle example_username --password example_password
 PATH=$PATH:/home/USER/.local/bsky_sh_cli/bin
 export PATH
 ```
-	You could also put any other `bsky-sh-cli` environment variables you like in there, and it *should* be called immediately before posting.
 
+You could also put any other `bsky-sh-cli` environment variables you like in
+there, and it should be called immediately before posting.
 
+You must set up both `toot` and `bsky-sh-cli` independently to use this script.
 
-  You must set up both `toot` and `bsky-sh-cli` independently to use this script. 
-  
-  Patootie uses the environment variable TOOTACCT to specify the tooting account otherwise it uses whichever one is currently active in toot. 
-  
-  You may specify the full path to an image file as the first (and only) command-line variable to "pre-load" the image attachment portion of the script.
-  
+Patootie uses the environment variable `TOOTACCT` to specify the tooting account;
+otherwise it uses whichever one is currently active in `toot`.
+
+You may specify the full path to an image file as the first and only
+command-line variable to pre-load the image attachment portion of the script.
+
 ![patootie first dialogue box](https://raw.githubusercontent.com/uriel1998/multiple_scripts/master/patootie_1.jpg)
 
 ![patootie alt text dialogue box](https://raw.githubusercontent.com/uriel1998/multiple_scripts/master/patootie_2.jpg)
 
-## yad-todo.sh
+## pdf2.sh
 
-Uses [yad](https://smokey01.com/yad/) to present a simple GUI for adding 
-entries to todo.txt file.  See the yad-todo.png file for what it might look like.
-If the program is not running, ensure that it is getting the `todo.txt` file passed to it!
+Wrapper around a handful of PDF extraction and conversion tools. It can extract
+embedded images, rasterize pages, turn the PDF into HTML and text-oriented
+formats, and build comic-book style archives from generated page images.
 
-## kpf.sh
+## pinry_cli_gui.sh
 
-Uses [fd](https://github.com/sharkdp/fd), [fzf](https://github.com/junegunn/fzf), 
-and [keepassxc-cli](https://www.mankier.com/1/keepassxc-cli) to provide a quick 
-and easy way to *retrieve* passwords from the command line.  By default copies 
-the password to the clipboard.  If you don't want to type your password (or select 
-your database location) every time, you can set them as environment variables. 
+YAD-based helper for feeding files into Pinry from the command line. It can read
+existing EXIF tags and comments, prompt for board, tags, and description, and
+record which files have already been uploaded.
 
-See [this post](https://ideatrash.net/2021/05/kpf-keepassxc-with-fzf-in-bash.html) for details.
+## play_exptv.sh
+
+Looks up the current EXP TV schedule block, builds the corresponding media URL,
+and opens it in `mpv` with the correct current seek offset.
+
+## PS1_functions
+
+Very simple PS1 helper functions to show when a git directory needs work and to
+shorten the home path shown in the prompt.
+
+## pulse-fzf-autoconf
+
+Helper script for moving and manipulating PulseAudio or PipeWire streams with an
+interactive picker flow. See
+https://ideatrash.net/2022/02/manipulating-audio-and-video-streams-for-streaming-on-linux.html
+
+## rename-pane
+
+Tiny tmux helper that renames the current pane from the shell.
+
+## sbagen_select.sh
+
+Interactive helper for selecting and running `sbagen` sessions from the command
+line.
 
 ## set-xwindow-icon-by-pid.sh
 
-Does exactly what it says on the tin. $1 is the string to search, $2 is the path to the icon file
+Does exactly what it says on the tin. `$1` is the string to search and `$2` is
+the path to the icon file.
 
 ## sr.sh
 
-A transparent wrapper for surfraw that utilizes fzf 
+A transparent wrapper for `surfraw` that utilizes `fzf`.
 https://terminalizer.com/view/4d1fd3b34309
 
-## ytube.sh
+## topcpu.sh
 
-A wrapper for youtube-dl to make easier (and automate) some things.
-
-## clipimg.sh
-
-Uses fzf, rofi, fd (optional), and xclip to choose an image, get it onto the 
-clipboard, and select it for pasting.  Works for JPG and PNG, does NOT work for 
-GIF, sadly.
-
-## tmux_devour.sh
-## tmux_sidebar.sh
-## tmux_topbar.sh
-
-All three are superceded by https://github.com/uriel1998/tdab
-
-
-## briefing.sh  
-
-Used along with Podfox to create a daily briefing without involving 
-Google or Amazon or Apple.  The post detailing this is at 
-[ideatrash](https://ideatrash.net/?p=69528).
-
-## virtualbox-openbox
-
-To dynamically create a list of virtualbox VM's (and allow you to run them) 
-as an OpenBox pipe menu
-
-## topmem.sh and topcpu.sh
-
-While these aren't exactly *speedy* or *optimized*, they do what I want;
-they show me the top five memory using (or CPU using, respectively) 
-*commands*.  That is, it lumps all `vivaldi-bin` or `firefox-bin` 
-processes together before doing the calculation and sort. That way I can 
+While these aren't exactly *speedy* or *optimized*, they do what I want. They
+show me the top CPU-using commands. That is, they lump all `vivaldi-bin` or
+`firefox-bin` processes together before doing the calculation and sort, so I can
 see what commands are eating up everything.
 
-A small note - processes from bash, python, and java (at present) are 
-not *excluded*, but the command they're *running* is what is counted. So 
-for example, these three commands:
+A small note: processes from bash, python, and java are not excluded, but the
+command they're running is what is counted. So for example, these three commands:
 
-`/usr/bin/python /usr/share/kupfer/kupfer.py --no-splash`  
-`/usr/bin/python /usr/bin/autokey-gtk`  
-`/usr/bin/python /usr/bin/dstat -c -C 0,1,total -d -s -n -y -r`  
+`/usr/bin/python /usr/share/kupfer/kupfer.py --no-splash`
+`/usr/bin/python /usr/bin/autokey-gtk`
+`/usr/bin/python /usr/bin/dstat -c -C 0,1,total -d -s -n -y -r`
 
-are *not* lumped together, but are treated as separate commands.
+are not lumped together, but are treated as separate commands.
 
-#books_search
+## topmem.sh
 
-Has been superceded by https://github.com/uriel1998/books_browse
+Same basic idea as `topcpu.sh`, but for memory usage instead of CPU usage. It
+groups usage by command so you can see what is actually consuming memory overall.
 
+## video-fzf-config
 
+Script for moving and manipulating video streams easily. It can help choose real
+and fake cameras, use `fzf` to pick devices and files, and supports fake
+background or replacement-stream workflows. See
+https://ideatrash.net/2022/02/manipulating-audio-and-video-streams-for-streaming-on-linux.html
 
+## video_volume_normalization.sh
 
+Processes MP4, MKV, and AVI files in the current directory with `ffmpeg`
+loudness normalization so their playback volume is more consistent.
 
+## virtualbox-openbox.sh
 
+Dynamically creates a list of VirtualBox VMs and allows you to run them as an
+Openbox pipe menu.
+
+## yad-todo.sh
+
+Uses [yad](https://smokey01.com/yad/) to present a simple GUI for adding tasks.
+It now supports both legacy `todo.txt` file usage and `todoman` multi-list setups.
+See `yad-todo.png` for what it might look like.
+
+If the program is not running in legacy mode, ensure that it is getting the
+`todo.txt` file passed to it. In `todoman` mode it will use your configured task
+lists instead.
+
+## ytube
+
+A wrapper for `youtube-dl` to make downloading or playing things easier and more
+automated. It can take a URL directly, pull one from the clipboard, or prompt
+through `zenity`, and supports video download, audio download, or playback.
