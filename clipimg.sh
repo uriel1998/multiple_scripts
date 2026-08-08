@@ -22,12 +22,14 @@ DRAGON_BIN="$(command -v dragon || true)"
 IconPath=""
 ClipartPath=""
 CliOnly="true"
+PreferredPreview="auto"
 UseStickerPacks="true"
 UseIcons="false"
 UseClipart="false"
 Choices=()
 StickerPackNames=()
 StickerPackPaths=()
+RequestedStickerPacks=()
 
 find_clipimg_config() {
     local -a candidates=(
@@ -88,13 +90,34 @@ is_supported_image_file() {
 
 display_help() {
     echo "###################################################################"
-    echo "#  clipimg.sh [-h|--help]"
+    echo "#  clipimg.sh [-h|--help] [stickerpack ...]"
     echo "# -h, --help  show help"
     echo "# -g GUI interface only. Default is CLI/TUI."
     echo "# -a select clipart only. Not selected by default."
     echo "# -i select icon only. Not selected by default."
+    echo "# --chafa prefer chafa for previews."
+    echo "# --timg prefer timg for previews."
     echo "# By default, uncommented entries under [StickerPacks] are used."
+    echo "# Positional stickerpack names restrict selection to matching packs."
+    echo "# Example: clipimg.sh blob blob2"
+    echo "# Config is read from .clipimg.env, clipimg.ini, or .clipimg.ini"
+    echo "# in the current directory or the script directory."
     echo "###################################################################"
+}
+
+stickerpack_requested() {
+    local pack_name="$1"
+    local requested_name
+
+    [ "${#RequestedStickerPacks[@]}" -gt 0 ] || return 0
+
+    for requested_name in "${RequestedStickerPacks[@]}"; do
+        if [[ "${requested_name,,}" == "${pack_name,,}" ]]; then
+            return 0
+        fi
+    done
+
+    return 1
 }
 
 add_stickerpack_entry() {
@@ -224,51 +247,66 @@ build_search_items() {
 }
 
 select_image() {
-    local choices_file
     local preview_command=""
     local selected_row=""
     local selected_label=""
+    local choice_row=""
     local timg_escaped=""
     local chafa_escaped=""
+    local preview_order=""
 
     [ "${#Choices[@]}" -gt 0 ] || return 0
 
-    choices_file="$(mktemp)"
-    printf '%s\n' "${Choices[@]}" > "$choices_file"
+    case "$PreferredPreview" in
+        chafa) preview_order="chafa-first" ;;
+        timg) preview_order="timg-first" ;;
+        *) preview_order="chafa-first" ;;
+    esac
 
-    if [ -n "$TIMG_BIN" ]; then
+    if [ "$preview_order" = "timg-first" ] && [ -n "$TIMG_BIN" ]; then
         printf -v timg_escaped '%q' "$TIMG_BIN"
-        preview_command="bash -c 'exec ${timg_escaped} -g 80x40 -- \"\$1\"' _ {1}"
+        preview_command="bash -c 'exec ${timg_escaped} -pq -g 60x60 -- \"\$1\"' _ {1}"
+    elif [ "$preview_order" = "timg-first" ] && [ -n "$CHAFA_BIN" ]; then
+        printf -v chafa_escaped '%q' "$CHAFA_BIN"
+        preview_command="bash -c 'exec ${chafa_escaped} --format symbols --animate off --size 60x60 -- \"\$1\"' _ {1}"
     elif [ -n "$CHAFA_BIN" ]; then
         printf -v chafa_escaped '%q' "$CHAFA_BIN"
-        preview_command="bash -c 'exec ${chafa_escaped} -- \"\$1\"' _ {1}"
+        preview_command="bash -c 'exec ${chafa_escaped} --format symbols --animate off --size 60x60 -- \"\$1\"' _ {1}"
+    elif [ -n "$TIMG_BIN" ]; then
+        printf -v timg_escaped '%q' "$TIMG_BIN"
+        preview_command="bash -c 'exec ${timg_escaped} -pq -g 60x60 -- \"\$1\"' _ {1}"
     else
         preview_command="bash -c 'printf \"%s\n\" \"\$1\"' _ {1}"
     fi
 
     if [ "$CliOnly" == "true" ]; then
         selected_row="$(
-            fzf \
+            printf '%s\n' "${Choices[@]}" | fzf \
+                --exact \
                 --no-hscroll \
-                --height 60% \
+                --height 80% \
                 --border \
                 --ansi \
                 --no-bold \
                 --header "Which image?" \
                 --delimiter=$'\t' \
                 --with-nth=2 \
-                --preview "$preview_command" < "$choices_file"
+                --preview "$preview_command"
         )"
     else
         selected_label="$(
-            cut -f2- "$choices_file" | rofi -i -dmenu -p "Which image?" -theme DarkBlue
+            printf '%s\n' "${Choices[@]}" | awk -F '\t' '{print $2}' | rofi -i -dmenu -p "Which image?" -theme DarkBlue
         )"
         if [ -n "$selected_label" ]; then
-            selected_row="$(awk -F '\t' -v label="$selected_label" '$2 == label { print; exit }' "$choices_file")"
+            for choice_row in "${Choices[@]}"; do
+                if [ "${choice_row#*$'\t'}" = "$selected_label" ]; then
+                    selected_row="$choice_row"
+                    break
+                fi
+            done
         fi
     fi
 
-    rm -f "$choices_file"
     printf '%s\n' "$selected_row"
 }
 
@@ -298,16 +336,29 @@ while [ $# -gt 0 ]; do
             CliOnly="false"
             shift
             ;;
+        --chafa)
+            PreferredPreview="chafa"
+            shift
+            ;;
+        --timg)
+            PreferredPreview="timg"
+            shift
+            ;;
         *)
-            printf 'Unknown option: %s\n' "$option" >&2
-            display_help >&2
-            exit 2
+            if [[ "$option" == -* ]]; then
+                printf 'Unknown option: %s\n' "$option" >&2
+                display_help >&2
+                exit 2
+            fi
+            RequestedStickerPacks+=("$option")
+            shift
             ;;
     esac
 done
 
 if [ "$UseStickerPacks" == "true" ]; then
     for i in "${!StickerPackNames[@]}"; do
+        stickerpack_requested "${StickerPackNames[$i]}" || continue
         build_search_items "${StickerPackNames[$i]}" "${StickerPackPaths[$i]}" "stickerpack"
     done
 fi
@@ -320,7 +371,7 @@ if [ "$UseIcons" == "true" ] && [ -n "$IconPath" ]; then
     build_search_items "icon" "$IconPath" "icon"
 fi
 
-mapfile -t Choices < <(printf '%s\n' "${Choices[@]}" | awk 'NF' | sort -t $'\t' -k 2,2)
+mapfile -t Choices < <(printf '%s\n' "${Choices[@]}" | awk 'NF')
 
 SelectedRow="$(select_image)"
 SelectedImage="$(printf '%s' "$SelectedRow" | awk -F $'\t' '{print $1}')"

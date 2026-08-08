@@ -26,9 +26,23 @@ Amazon or Apple. The post detailing this is at
 
 ## clipimg.sh
 
-Uses `fzf`, `rofi`, `fd` (optional), and `xclip` to choose an image, get it onto
-the clipboard, and select it for pasting. Works for JPG and PNG, and does not
-work for GIF.
+Uses `fzf` or `rofi` to choose a sticker, icon, or clipart image, then puts it
+onto the clipboard for pasting. By default it builds its list from uncommented
+entries under `[StickerPacks]` in `clipimg` config, with each pack defined as
+`Name:/full/path/to/pack`.
+
+The script will look for config in the current working directory or in the same
+directory as the script, using `.clipimg.env`, `clipimg.ini`, or `.clipimg.ini`.
+Icons and clipart are configured separately under `[Icons]` and `[ClipArt]`.
+
+You can pass sticker-pack names on the command line to limit the picker to those
+packs only, for example `clipimg.sh blob` or `clipimg.sh blob blob2`. If you do
+not name any packs, it includes every uncommented sticker pack from the config.
+
+Sticker selections are shown as `PackName:filename`, such as `Blob2:angry mad`,
+and only supported image files are presented. Terminal previews currently prefer
+`chafa` in symbols mode with animation disabled, and fall back to `timg` in
+quarter-block mode.
 
 ## cont-stop.sh
 
