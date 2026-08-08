@@ -38,17 +38,18 @@
 SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
 CLIPIMG_ENV_FILE="${SCRIPT_DIR}/.clipimg.env"
 
-EmojiPath="/home/steven/Documents/images/emojis/"
-ReactionPath="/home/steven/Documents/images/all_reactions/"
-IconPath="/home/steven/.icons/"
-ClipartPath="/home/steven/documents/resources/"
+EmojiPath="${EmojiPath:-}"
+ReactionPath="${ReactionPath:-}"
+IconPath="${IconPath:-}"
+ClipartPath="${ClipartPath:-}"
+
 FD_FIND="$(command -v fdfind || true)"
 FD_ALT="$(command -v fd || true)"
 TIMG_BIN="$(command -v timg || true)"
 CHAFA_BIN="$(command -v chafa || true)"
 TempSearchPath=""
 TempSearchLabel=""
-Emoji="false"
+Emoji="true"
 Reaction="true"
 Icon="false"
 Clipart="false"
@@ -67,13 +68,13 @@ fi
 ##############################################################################
 display_help(){
     echo "###################################################################"
-    echo "#  copyimage.sh [-h|-c]"
-    echo "# -h show help "
+    echo "#  clipimg.sh [-h|--help]"
+    echo "# -h, --help  show help"
     echo "# -g GUI interface only. Default is CLI/TUI. "
     echo "# -a select clipart only. Not selected by default. "
-    echo "# -a select icon only. Not selected by default. "
-    echo "# -e select emoji only. Default is both. "      
-    echo "# -r select reaction only. Default is both. "
+    echo "# -i select icon only. Not selected by default. "
+    echo "# -e select emoji only. Default is emoji and reactions. "
+    echo "# -r select reaction only. Default is emoji and reactions. "
     echo "###################################################################"
 }
 
@@ -88,6 +89,18 @@ build_search_items() {
     local path
     local relative_path
     local display_path
+    local first_segment
+    local singular_label
+    local search_root
+
+    if ! search_root="$(realpath -e "$TempSearchPath" 2>/dev/null)"; then
+        printf 'Warning: search path not found or invalid: %s\n' "$TempSearchPath" >&2
+        TempSearchPath=""
+        TempSearchLabel=""
+        return 0
+    fi
+
+    singular_label="${TempSearchLabel%s}"
 
     if [ -n "$DRAGON_bin" ]; then
         extensions=(png jpg gif)
@@ -102,25 +115,37 @@ build_search_items() {
     if [ -n "$FD_FIND" ]; then
         while IFS= read -r path; do
             [ -n "$path" ] || continue
-            relative_path="${path#"${TempSearchPath}"/}"
+            relative_path="$(realpath --relative-to="$search_root" "$path" 2>/dev/null || basename "$path")"
+            first_segment="${relative_path%%/*}"
+            if [ "$relative_path" != "$first_segment" ] && { [ "$first_segment" = "$TempSearchLabel" ] || [ "$first_segment" = "$singular_label" ]; }; then
+                relative_path="${relative_path#*/}"
+            fi
             display_path="${TempSearchLabel}: ${relative_path}"
             Choices+=("${path}"$'\t'"${display_path}")
-        done < <("$FD_FIND" -a "${finder_args[@]}" . "$TempSearchPath")
+        done < <("$FD_FIND" -a "${finder_args[@]}" . "$search_root")
     elif [ -n "$FD_ALT" ]; then
         while IFS= read -r path; do
             [ -n "$path" ] || continue
-            relative_path="${path#"${TempSearchPath}"/}"
+            relative_path="$(realpath --relative-to="$search_root" "$path" 2>/dev/null || basename "$path")"
+            first_segment="${relative_path%%/*}"
+            if [ "$relative_path" != "$first_segment" ] && { [ "$first_segment" = "$TempSearchLabel" ] || [ "$first_segment" = "$singular_label" ]; }; then
+                relative_path="${relative_path#*/}"
+            fi
             display_path="${TempSearchLabel}: ${relative_path}"
             Choices+=("${path}"$'\t'"${display_path}")
-        done < <("$FD_ALT" -a "${finder_args[@]}" . "$TempSearchPath")
+        done < <("$FD_ALT" -a "${finder_args[@]}" . "$search_root")
     else
         while IFS= read -r path; do
             [ -n "$path" ] || continue
-            relative_path="${path#"${TempSearchPath}"/}"
+            relative_path="$(realpath --relative-to="$search_root" "$path" 2>/dev/null || basename "$path")"
+            first_segment="${relative_path%%/*}"
+            if [ "$relative_path" != "$first_segment" ] && { [ "$first_segment" = "$TempSearchLabel" ] || [ "$first_segment" = "$singular_label" ]; }; then
+                relative_path="${relative_path#*/}"
+            fi
             display_path="${TempSearchLabel}: ${relative_path}"
             Choices+=("${path}"$'\t'"${display_path}")
         done < <(
-            find -H "$TempSearchPath" -type f \( \
+            find -H "$search_root" -type f \( \
                 -iname "*.png" -o \
                 -iname "*.jpg" -o \
                 -iname "*.gif" \
@@ -135,13 +160,19 @@ build_search_items() {
     while [ $# -gt 0 ]; do
     option="$1"
         case $option in
-        -h) display_help
+        -h|--help) display_help
             exit
             ;;      
              #this is actually a negative selector
-        -r) Emoji="false" 
+        -r) Reaction="true"
+            Emoji="false"
+            Clipart="false"
+            Icon="false"
             shift ;;      
-        -e) Reaction="false"
+        -e) Emoji="true"
+            Reaction="false"
+            Clipart="false"
+            Icon="false"
             shift ;;
             # these are positive selectors, since they're not default
         -a) Clipart="true"
@@ -155,7 +186,12 @@ build_search_items() {
             Icon="true"
             shift ;;            
         -g) CliOnly="false"
-            shift ;;      
+            shift ;;
+        *)
+            printf 'Unknown option: %s\n' "$option" >&2
+            display_help >&2
+            exit 2
+            ;;
         esac
     done    
 
@@ -202,16 +238,20 @@ select_image() {
     local preview_command=""
     local selected_row=""
     local selected_label=""
+    local timg_escaped=""
+    local chafa_escaped=""
 
     choices_file="$(mktemp)"
     printf '%s\n' "${Choices[@]}" > "$choices_file"
 
     if [ -n "$TIMG_BIN" ]; then
-        preview_command="$TIMG_BIN -g 80x40 -- {1}"
+        printf -v timg_escaped '%q' "$TIMG_BIN"
+        preview_command="bash -c 'exec ${timg_escaped} -g 80x40 -- \"\$1\"' _ {1}"
     elif [ -n "$CHAFA_BIN" ]; then
-        preview_command="$CHAFA_BIN -- {1}"
+        printf -v chafa_escaped '%q' "$CHAFA_BIN"
+        preview_command="bash -c 'exec ${chafa_escaped} -- \"\$1\"' _ {1}"
     else
-        preview_command="printf '%s\n' {1}"
+        preview_command="bash -c 'printf \"%s\n\" \"\$1\"' _ {1}"
     fi
 
     if [ "$CliOnly" == "true" ]; then
