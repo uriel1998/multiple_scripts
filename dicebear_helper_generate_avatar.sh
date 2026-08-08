@@ -8,6 +8,7 @@
 seed=""
 avatar_dir="${DICEBEAR_AVATAR_DIR:-${XDG_CACHE_HOME:-$HOME/.cache}/dicebear}"
 skip_clipboard="${DICEBEAR_NO_CLIPBOARD:-0}"
+api_style=""
 
 
 if [ "$#" -eq 0 ];then
@@ -22,9 +23,14 @@ mkdir -p "${avatar_dir}"
 # If you already did it once, don't do it again
 
 if [ ! -f "${avatar_dir}/${seed}.png" ];then
-	# Try the online source with "clay" 
+	# Randomize the online DiceBear style for new cached avatars.
+	if [ $((RANDOM % 2)) -eq 0 ]; then
+		api_style="clay"
+	else
+		api_style="critters"
+	fi
 
-		if ! wget -q "https://api.dicebear.com/10.x/clay/png?animationVariant=&backgroundColor=5e5c64,813d9c,613583,1c71d8,1a5fb4,26a269&backgroundColorAngle=-67&backgroundColorFillStops=2&size=512&seed=${seed}" -O "${avatar_dir}/${seed}.png"; then
+		if ! wget -q "https://api.dicebear.com/10.x/${api_style}/png?animationVariant=&backgroundColor=5e5c64,813d9c,613583,1c71d8,1a5fb4,26a269&backgroundColorAngle=-67&backgroundColorFillStops=2&size=512&seed=${seed}" -O "${avatar_dir}/${seed}.png"; then
 		rm -f "${avatar_dir}/${seed}.png"
 	fi
 
