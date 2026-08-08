@@ -8,6 +8,7 @@ MANIFEST_FILE="${OUTPUT_DIR}/likely_placeholder_avatars.tsv"
 MAX_DIMENSION="${VCF_PLACEHOLDER_MAX_DIMENSION:-96}"
 MAX_COLORS="${VCF_PLACEHOLDER_MAX_COLORS:-4000}"
 MAX_MIRROR_RMSE="${VCF_PLACEHOLDER_MAX_MIRROR_RMSE:-0.18}"
+FAST_SKIP_DIMENSION="${VCF_PLACEHOLDER_FAST_SKIP_DIMENSION:-128}"
 
 usage() {
     cat <<'EOF'
@@ -40,6 +41,7 @@ Heuristic tuning:
   VCF_PLACEHOLDER_MAX_DIMENSION=96
   VCF_PLACEHOLDER_MAX_COLORS=4000
   VCF_PLACEHOLDER_MAX_MIRROR_RMSE=0.18
+  VCF_PLACEHOLDER_FAST_SKIP_DIMENSION=128
 EOF
 }
 
@@ -77,6 +79,23 @@ extract_field() {
     ' "$vcf_file"
 }
 
+has_repo_generated_avatar_marker() {
+    local vcf_file="$1"
+
+    grep -Eiq '^X-DICEBEAR-GENERATED:TRUE(\r)?$|^X-DICEBEAR-SOURCE:(dicebear|libravatar|gravatar|dicebear_helper_generate_avatar\.sh)(\r)?$' "$vcf_file"
+}
+
+basic_image_stats() {
+    local image_file="$1"
+    local width height mime_type
+
+    width="$(identify -format '%w' "$image_file" 2>/dev/null || echo 0)"
+    height="$(identify -format '%h' "$image_file" 2>/dev/null || echo 0)"
+    mime_type="$(file --mime-type -b "$image_file" 2>/dev/null || echo '')"
+
+    printf '%s\t%s\t%s\n' "$width" "$height" "$mime_type"
+}
+
 metric_rmse() {
     local image_file="$1"
     local mode="$2"
@@ -97,20 +116,17 @@ metric_rmse() {
     printf '%s\n' "$raw" | awk -F'[()]' '{print $2}'
 }
 
-image_stats() {
+image_detail_stats() {
     local image_file="$1"
-    local width height colors horizontal_rmse vertical_rmse mime_type sha256
+    local colors horizontal_rmse vertical_rmse sha256
 
-    width="$(identify -format '%w' "$image_file" 2>/dev/null || echo 0)"
-    height="$(identify -format '%h' "$image_file" 2>/dev/null || echo 0)"
     colors="$(convert "$image_file" -format %k info: 2>/dev/null || echo 999999)"
     horizontal_rmse="$(metric_rmse "$image_file" flop)"
     vertical_rmse="$(metric_rmse "$image_file" flip)"
-    mime_type="$(file --mime-type -b "$image_file" 2>/dev/null || echo '')"
     sha256="$(sha256sum "$image_file" | awk '{print $1}')"
 
-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\n' \
-        "$width" "$height" "$colors" "$horizontal_rmse" "$vertical_rmse" "$mime_type" "$sha256"
+    printf '%s\t%s\t%s\t%s\n' \
+        "$colors" "$horizontal_rmse" "$vertical_rmse" "$sha256"
 }
 
 is_supported_image() {
@@ -181,6 +197,7 @@ rewrite_vcf_photo() {
     local temp_file
     local newline=$'\n'
     local line
+    local normalized_line
     local skip_photo=0
     local inserted=0
     local photo_line
@@ -192,8 +209,13 @@ rewrite_vcf_photo() {
     fi
 
     while IFS= read -r line || [ -n "$line" ]; do
+        normalized_line="${line%$'\r'}"
+        while [ "${normalized_line%$'\r'}" != "$normalized_line" ]; do
+            normalized_line="${normalized_line%$'\r'}"
+        done
+
         if [ "$skip_photo" -eq 1 ]; then
-            case "$line" in
+            case "$normalized_line" in
                 " "*|$'\t'*)
                     continue
                     ;;
@@ -203,21 +225,21 @@ rewrite_vcf_photo() {
             esac
         fi
 
-        case "$line" in
+        case "$normalized_line" in
             PHOTO*|$'PHOTO'*)
                 skip_photo=1
                 continue
                 ;;
         esac
 
-        if [ "$line" = $'END:VCARD\r' ] || [ "$line" = 'END:VCARD' ]; then
+        if [ "$normalized_line" = 'END:VCARD' ]; then
             while IFS= read -r photo_line || [ -n "$photo_line" ]; do
                 printf '%s%s' "$photo_line" "$newline"
             done < "$photo_block_file"
             inserted=1
         fi
 
-        printf '%s%s' "$line" "$newline"
+        printf '%s%s' "$normalized_line" "$newline"
     done < "$vcf_file" > "$temp_file"
 
     if [ "$inserted" -ne 1 ]; then
@@ -256,6 +278,7 @@ remove_photo_from_vcf() {
     local temp_file
     local newline=$'\n'
     local line
+    local normalized_line
     local skip_continuations=0
 
     temp_file="$(mktemp)"
@@ -265,8 +288,13 @@ remove_photo_from_vcf() {
     fi
 
     while IFS= read -r line || [ -n "$line" ]; do
+        normalized_line="${line%$'\r'}"
+        while [ "${normalized_line%$'\r'}" != "$normalized_line" ]; do
+            normalized_line="${normalized_line%$'\r'}"
+        done
+
         if [ "$skip_continuations" -eq 1 ]; then
-            case "$line" in
+            case "$normalized_line" in
                 " "*|$'\t'*)
                     continue
                     ;;
@@ -276,14 +304,14 @@ remove_photo_from_vcf() {
             esac
         fi
 
-        case "$line" in
+        case "$normalized_line" in
             PHOTO*|$'PHOTO'*)
                 skip_continuations=1
                 continue
                 ;;
         esac
 
-        printf '%s%s' "$line" "$newline"
+        printf '%s%s' "$normalized_line" "$newline"
     done < "$vcf_file" > "$temp_file"
 
     mv "$temp_file" "$vcf_file"
@@ -292,7 +320,9 @@ remove_photo_from_vcf() {
 run_scan() {
     local contact_dir="$1"
     local staging_dir
-    local file_found=0
+    local -a vcf_files=()
+    local total_files=0
+    local processed_files=0
     local match_count=0
     local vcf_file base_name image_file mime_type extension dest_file fn_value email_value
     local width height colors horizontal_rmse vertical_rmse sha256
@@ -309,24 +339,51 @@ run_scan() {
 
     printf 'vcf_file\tfn\temail\texport_file\tdimensions\tcolors\thorizontal_rmse\tvertical_rmse\tsha256\n' > "$MANIFEST_FILE"
     staging_dir="$(mktemp -d)"
+    mapfile -d '' -t vcf_files < <(find "$contact_dir" -type f \( -iname '*.vcf' -o -iname '*.vcard' \) -print0 | sort -z)
+    total_files="${#vcf_files[@]}"
 
-    while IFS= read -r -d '' vcf_file; do
-        file_found=1
+    if [ "$total_files" -eq 0 ]; then
+        rm -rf "$staging_dir"
+        printf 'No vCard files found in %s\n' "$contact_dir" >&2
+        exit 1
+    fi
+
+    for vcf_file in "${vcf_files[@]}"; do
+        processed_files=$((processed_files + 1))
         base_name="$(basename "$vcf_file" .vcf)"
+        if [ "$base_name" = "$vcf_file" ]; then
+            base_name="$(basename "$vcf_file" .vcard)"
+        fi
         image_file="$staging_dir/$base_name.bin"
+        printf '[%d/%d] %s\n' "$processed_files" "$total_files" "$vcf_file" >&2
 
         if ! extract_photo "$vcf_file" "$image_file"; then
             continue
         fi
 
-        stats="$(image_stats "$image_file")"
-        IFS=$'\t' read -r width height colors horizontal_rmse vertical_rmse mime_type sha256 <<< "$stats"
+        stats="$(basic_image_stats "$image_file")"
+        IFS=$'\t' read -r width height mime_type <<< "$stats"
 
         if ! is_supported_image "$mime_type"; then
             continue
         fi
 
         standardize_photo_in_vcf "$vcf_file" "$image_file" "$mime_type"
+
+        if has_repo_generated_avatar_marker "$vcf_file"; then
+            continue
+        fi
+
+        if [ "$width" -le 0 ] || [ "$height" -le 0 ]; then
+            continue
+        fi
+
+        if [ "$width" -gt "$FAST_SKIP_DIMENSION" ] || [ "$height" -gt "$FAST_SKIP_DIMENSION" ]; then
+            continue
+        fi
+
+        stats="$(image_detail_stats "$image_file")"
+        IFS=$'\t' read -r colors horizontal_rmse vertical_rmse sha256 <<< "$stats"
 
         if ! is_likely_placeholder "$width" "$height" "$colors" "$horizontal_rmse" "$vertical_rmse"; then
             continue
@@ -337,20 +394,15 @@ run_scan() {
         dest_file="$OUTPUT_DIR/likely_placeholder_${match_count}_${base_name}.${extension}"
         cp "$image_file" "$dest_file"
 
-        fn_value="$(extract_field "FN" "$vcf_file" | tr '\t' ' ' | tr '\n' ' ')"
-        email_value="$(extract_field "EMAIL" "$vcf_file" | tr '\t' ' ' | tr '\n' ' ')"
+        fn_value="$(extract_field "FN" "$vcf_file" | tr '\r\t' '  ' | tr '\n' ' ')"
+        email_value="$(extract_field "EMAIL" "$vcf_file" | tr '\r\t' '  ' | tr '\n' ' ')"
 
         printf '%s\t%s\t%s\t%s\t%sx%s\t%s\t%s\t%s\t%s\n' \
             "$vcf_file" "$fn_value" "$email_value" "$(basename "$dest_file")" \
             "$width" "$height" "$colors" "$horizontal_rmse" "$vertical_rmse" "$sha256" >> "$MANIFEST_FILE"
-    done < <(find "$contact_dir" -type f \( -iname '*.vcf' -o -iname '*.vcard' \) -print0 | sort -z)
+    done
 
     rm -rf "$staging_dir"
-
-    if [ "$file_found" -eq 0 ]; then
-        printf 'No vCard files found in %s\n' "$contact_dir" >&2
-        exit 1
-    fi
 
     printf 'Extracted %d likely geometric placeholders into %s\n' "$match_count" "$OUTPUT_DIR"
     printf 'Manifest written to %s\n' "$MANIFEST_FILE"
