@@ -35,19 +35,31 @@
 ##############################################################################
 # Init
 ##############################################################################
+SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+CLIPIMG_ENV_FILE="${SCRIPT_DIR}/.clipimg.env"
+
 EmojiPath="/home/steven/Documents/images/emojis/"
 ReactionPath="/home/steven/Documents/images/all_reactions/"
 IconPath="/home/steven/.icons/"
 ClipartPath="/home/steven/documents/resources/"
-FD_FIND=$(which fdfind)
+FD_FIND="$(command -v fdfind || true)"
+FD_ALT="$(command -v fd || true)"
+TIMG_BIN="$(command -v timg || true)"
+CHAFA_BIN="$(command -v chafa || true)"
 TempSearchPath=""
+TempSearchLabel=""
 Emoji="false"
 Reaction="true"
 Icon="false"
 Clipart="false"
 CliOnly="true"
-Choices=""
-DRAGON_bin=$(which dragon)
+Choices=()
+DRAGON_bin="$(command -v dragon || true)"
+
+if [ -f "$CLIPIMG_ENV_FILE" ]; then
+    # shellcheck disable=SC1090,SC1091
+    . "$CLIPIMG_ENV_FILE"
+fi
 
 
 ##############################################################################
@@ -71,31 +83,61 @@ display_help(){
 ##############################################################################
 
 build_search_items() {
-    if [ ! -z "$DRAGON_bin" ];then
-        if [ -f "$FD_FIND" ];then
-            Choices+=$(fdfind -a -e png -e jpg -e gif . "$TempSearchPath")
-        else
-            Choices+=$(find -H "$SearchPath" -type f -iname "*.png" -or -iname "*.jpg" -or -iname "*.gif")
-        fi        
+    local -a extensions=()
+    local -a finder_args=()
+    local path
+    local relative_path
+    local display_path
+
+    if [ -n "$DRAGON_bin" ]; then
+        extensions=(png jpg gif)
     else
-        if [ -f "$FD_FIND" ];then
-            Choices+=$(fdfind -a -e png -e jpg . "$TempSearchPath")
-        else
-            Choices+=$(find -H "$SearchPath" -type f -iname "*.png" -or -iname "*.jpg")
-        fi
+        extensions=(png jpg)
     fi
-    Choices+="\n"
-    TempSearchPath=""       
+
+    for path in "${extensions[@]}"; do
+        finder_args+=(-e "$path")
+    done
+
+    if [ -n "$FD_FIND" ]; then
+        while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            relative_path="${path#"${TempSearchPath}"/}"
+            display_path="${TempSearchLabel}: ${relative_path}"
+            Choices+=("${path}"$'\t'"${display_path}")
+        done < <("$FD_FIND" -a "${finder_args[@]}" . "$TempSearchPath")
+    elif [ -n "$FD_ALT" ]; then
+        while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            relative_path="${path#"${TempSearchPath}"/}"
+            display_path="${TempSearchLabel}: ${relative_path}"
+            Choices+=("${path}"$'\t'"${display_path}")
+        done < <("$FD_ALT" -a "${finder_args[@]}" . "$TempSearchPath")
+    else
+        while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            relative_path="${path#"${TempSearchPath}"/}"
+            display_path="${TempSearchLabel}: ${relative_path}"
+            Choices+=("${path}"$'\t'"${display_path}")
+        done < <(
+            find -H "$TempSearchPath" -type f \( \
+                -iname "*.png" -o \
+                -iname "*.jpg" -o \
+                -iname "*.gif" \
+            \)
+        )
+    fi
+
+    TempSearchPath=""
+    TempSearchLabel=""
 }
-
-
     #uses copyq to select image and copy it to clipboard for pasting
     while [ $# -gt 0 ]; do
     option="$1"
         case $option in
         -h) display_help
             exit
-            shift ;;      
+            ;;      
              #this is actually a negative selector
         -r) Emoji="false" 
             shift ;;      
@@ -123,28 +165,26 @@ build_search_items() {
     # This could maybe be fancier, but it would be more complicated
     if [ "$Emoji" == "true" ];then
         TempSearchPath="$EmojiPath"
+        TempSearchLabel="emoji"
         build_search_items
     fi
     if [ "$Reaction" == "true" ];then
         TempSearchPath="$ReactionPath"
+        TempSearchLabel="reaction"
         build_search_items
     fi
     if [ "$Clipart" == "true" ];then
         TempSearchPath="$ClipartPath"
+        TempSearchLabel="clipart"
         build_search_items
     fi
     if [ "$Icon" == "true" ];then
         TempSearchPath="$IconPath"
+        TempSearchLabel="icon"
         build_search_items
     fi
-    
-    if [ "$Reaction" == "true" ] || [ "$Emjoi" == "true" ] || [ "$Clipart" == "true" ];then
-        SortTemp=$(echo -e "$Choices" | sort -t '/' -k 6)
-    elif [ "$Icon" == "true" ];then
-        SortTemp=$(echo -e "$Choices" | sort -t '/' -k 5)    
-    fi
-    
-    Choices="$SortTemp"
+
+    mapfile -t Choices < <(printf '%s\n' "${Choices[@]}" | sort -t $'\t' -k 2,2)
 
 
 ##############################################################################
@@ -157,13 +197,52 @@ build_search_items() {
 # AFAIK there's no way to preview with rofi 
 ##############################################################################
 
-    
-    if [ "$CliOnly" == "true" ];then
-        SelectedImage=$(echo -e "$Choices" | fzf --no-hscroll -m --height 60% --border --ansi --no-bold --header "Which Reaction?" --preview 'chafa {}'  | xargs realpath )
+select_image() {
+    local choices_file
+    local preview_command=""
+    local selected_row=""
+    local selected_label=""
+
+    choices_file="$(mktemp)"
+    printf '%s\n' "${Choices[@]}" > "$choices_file"
+
+    if [ -n "$TIMG_BIN" ]; then
+        preview_command="$TIMG_BIN -g 80x40 -- {1}"
+    elif [ -n "$CHAFA_BIN" ]; then
+        preview_command="$CHAFA_BIN -- {1}"
     else
-        #use ROFI, not zenity 
-        SelectedImage=$(echo -e "$Choices" | rofi -i -dmenu -p "Which Reaction?" -theme DarkBlue | xargs realpath )
+        preview_command="printf '%s\n' {1}"
     fi
+
+    if [ "$CliOnly" == "true" ]; then
+        selected_row="$(
+            fzf \
+                --no-hscroll \
+                --height 60% \
+                --border \
+                --ansi \
+                --no-bold \
+                --header "Which Reaction?" \
+                --delimiter=$'\t' \
+                --with-nth=2 \
+                --preview "$preview_command" < "$choices_file"
+        )"
+    else
+        selected_label="$(
+            cut -f2- "$choices_file" | rofi -i -dmenu -p "Which Reaction?" -theme DarkBlue
+        )"
+        if [ -n "$selected_label" ]; then
+            selected_row="$(awk -F '\t' -v label="$selected_label" '$2 == label { print; exit }' "$choices_file")"
+        fi
+    fi
+
+    rm -f "$choices_file"
+
+    printf '%s\n' "$selected_row"
+}
+
+SelectedRow="$(select_image)"
+SelectedImage="$(printf '%s' "$SelectedRow" | awk -F $'\t' '{print $1}')"
 
 
 ##############################################################################
@@ -171,8 +250,8 @@ build_search_items() {
 ##############################################################################
 
 if [ -f "$SelectedImage" ];then
-    if [ ! -z "$DRAGON_bin" ];then
-        `$DRAGON_bin -a -x "$SelectedImage" &`
+    if [ -n "$DRAGON_bin" ];then
+        "$DRAGON_bin" -a -x "$SelectedImage" &
     else
         mime=$(mimetype "$SelectedImage" | awk -F ': ' '{print $2}')
         # Tee does not seem to like binary data...
@@ -188,5 +267,3 @@ if [ -f "$SelectedImage" ];then
         fi
     fi
 fi
-
-
