@@ -211,9 +211,18 @@ for details.
 
 ## lowload.sh
 
-Gets some of the functionality of `atd` and task-spooler together. It waits until
-system load drops below a configured threshold and then runs the labeled job via
-`tsp`.
+Small gate in front of task-spooler for jobs that should only start when the
+machine is relatively quiet. It polls the 1-minute load average from
+`/proc/loadavg`, waits until that value is at or below the built-in threshold
+of `2.0`, and then submits the command to `tsp` with the label you provided.
+
+Only one waiting `lowload.sh` process is allowed per label at a time. If a
+second caller uses the same label while the first is still waiting, it exits
+with code `99` instead of queuing a duplicate waiter. The script currently
+checks load every 20 seconds, requires `tsp` to be installed, and fails
+explicitly if it cannot read the current load average.
+
+Run `lowload.sh --help` for the current usage summary and exit codes.
 
 ## mu-search.sh
 
