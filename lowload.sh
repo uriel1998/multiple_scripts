@@ -2,36 +2,54 @@
 
 ##############################################################################
 #
-#  lowload.sh
-#  Get the functionality of atd and task-spooler together 
-#  (c) Steven Saus 2021
-#  Licensed under the MIT license
+# lowload.sh
+# Wait for system load to fall below a threshold, then submit a command
+# to task-spooler.
 #
 ##############################################################################
 
-# first var is command to run
-# second var is for task-spooler/process label
+MAXLOAD=2.0
+CHECK_INTERVAL=20
 
-AllVars="${@}"
-FirstVar="${1}"
-SecondVar="${2}"
-Binary=$(which tsp)
+if (( $# < 2 )); then
+    echo "Usage: $0 LABEL COMMAND [ARGS...]" >&2
+    exit 2
+fi
 
-if [ -f "/tmp/${SecondVar}" ]; then
-    echo "Process ${SecondVar} still waiting to execute from last run" >&2
+label="$1"
+shift
+
+lockfile="/tmp/lowload-${label}"
+tsp=$(command -v tsp) || {
+    echo "task-spooler (tsp) not found" >&2
+    exit 1
+}
+
+if ! ( set -o noclobber; > "$lockfile" ) 2>/dev/null; then
+    echo "Process '$label' is already waiting to execute." >&2
     exit 99
 fi
 
-touch "/tmp/${SecondVar}"
+cleanup()
+{
+    rm -f "$lockfile"
+}
 
-MyLoad=$(cat /proc/loadavg | awk '{print $1}')
-    while [[ "$MyLoad" > 2 ]];do                      ####EDIT THIS LINE FOR LOAD CHANGES
-        echo "Waiting for load to drop below 2"
-        sleep 20s
-        echo "."
-        MyLoad=$(cat /proc/loadavg | awk '{print $1}')
-    done
+trap cleanup EXIT INT TERM HUP
 
-rm "/tmp/${SecondVar}"
+while :; do
+    load=$(awk '{print $1}' /proc/loadavg)
 
-tsp -L "${SecondVar}" -d "${FirstVar}"
+    if awk -v load="$load" -v max="$MAXLOAD" \
+        'BEGIN { exit !(load <= max) }'
+    then
+        break
+    fi
+
+    echo "[$label] load is $load; waiting for load <= $MAXLOAD"
+    sleep "$CHECK_INTERVAL"
+done
+
+echo "[$label] load is $load; submitting job"
+
+"$tsp" -L "$label" -- "$@"
