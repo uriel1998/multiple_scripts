@@ -31,10 +31,13 @@ PreferredPreview="auto"
 PreferKittyPreview="false"
 CreateCacheOnly="false"
 PathOnly="false"
+NoDragon="false"
 Choices=()
 StickerPackNames=()
 StickerPackPaths=()
 RequestedStickerPacks=()
+OverrideStickerNames=()
+OverrideStickerDirs=()
 
 find_clipimg_config() {
     local -a candidates=()
@@ -108,21 +111,26 @@ is_supported_image_file() {
 
 display_help() {
     echo "###################################################################"
-    echo "#  clipimg.sh [-h|--help] [stickerpack ...]"
+    echo "#  clipimg.sh [-h|--help] [--sticker pack-or-dir ...] [stickerpack ...]"
     echo "# -h, --help  show help"
     echo "# -g GUI interface only. Default is CLI/TUI."
     echo "# --chafa prefer chafa for previews."
     echo "# --timg prefer timg for previews."
     echo "# --kitty use kitty graphics previews when running in kitty."
     echo "# Falls back to normal previews when not in kitty or inside tmux."
+    echo "# --sticker NAME|DIR can be used multiple times."
+    echo "# If used, it replaces env-defined stickerpacks and only uses the"
+    echo "# named packs or directories passed on the command line."
     echo "# --create-cache build ${CLIPIMG_CACHE_FILE} and exit."
     echo "# --path-only copy the selected file path as text instead of"
     echo "# image data to xclip and copyq."
+    echo "# --no-dragon do not launch dragon even in normal image mode."
     echo "# By default, uncommented entries under [StickerPacks] are used."
     echo "# If you want old icon or clipart directories included, point a"
     echo "# stickerpack entry at those directories in the env file."
     echo "# Positional stickerpack names restrict selection to matching packs."
     echo "# Example: clipimg.sh blob blob2"
+    echo "# Example: clipimg.sh --sticker blob --sticker /path/to/stickers"
     echo "# Config is read from .clipimg.env, clipimg.ini, or .clipimg.ini"
     echo "# in the current directory or the script directory."
     echo "# Clipboard output uses any available combination of dragon,"
@@ -175,6 +183,64 @@ add_stickerpack_entry() {
 
     StickerPackNames+=("$entry_name")
     StickerPackPaths+=("$entry_path")
+}
+
+add_override_sticker_name() {
+    local requested_name="$1"
+    local existing_name
+
+    requested_name="$(trim_whitespace "$requested_name")"
+    [ -n "$requested_name" ] || return 0
+
+    for existing_name in "${OverrideStickerNames[@]}"; do
+        if [[ "${existing_name,,}" == "${requested_name,,}" ]]; then
+            return 0
+        fi
+    done
+
+    OverrideStickerNames+=("$requested_name")
+}
+
+add_override_sticker_dir() {
+    local requested_dir="$1"
+    local resolved_dir
+    local existing_dir
+
+    requested_dir="$(trim_whitespace "$requested_dir")"
+    requested_dir="$(strip_surrounding_quotes "$requested_dir")"
+    [ -n "$requested_dir" ] || return 0
+
+    if ! resolved_dir="$(realpath -e "$requested_dir" 2>/dev/null)"; then
+        return 0
+    fi
+
+    [ -d "$resolved_dir" ] || return 0
+
+    for existing_dir in "${OverrideStickerDirs[@]}"; do
+        if [ "$existing_dir" = "$resolved_dir" ]; then
+            return 0
+        fi
+    done
+
+    OverrideStickerDirs+=("$resolved_dir")
+}
+
+queue_override_sticker() {
+    local requested_entry="$1"
+    local pack_name
+
+    requested_entry="$(trim_whitespace "$requested_entry")"
+    requested_entry="$(strip_surrounding_quotes "$requested_entry")"
+    [ -n "$requested_entry" ] || return 0
+
+    for pack_name in "${StickerPackNames[@]}"; do
+        if [[ "${pack_name,,}" == "${requested_entry,,}" ]]; then
+            add_override_sticker_name "$pack_name"
+            return 0
+        fi
+    done
+
+    add_override_sticker_dir "$requested_entry"
 }
 
 launch_dragon() {
@@ -326,6 +392,24 @@ create_cache() {
     printf 'Wrote cache to %s\n' "$cache_file"
 }
 
+build_override_choices() {
+    local requested_name
+    local requested_dir
+    local i
+
+    for requested_name in "${OverrideStickerNames[@]}"; do
+        for i in "${!StickerPackNames[@]}"; do
+            if [[ "${StickerPackNames[$i],,}" == "${requested_name,,}" ]]; then
+                build_search_items "${StickerPackNames[$i]}" "${StickerPackPaths[$i]}" "stickerpack"
+            fi
+        done
+    done
+
+    for requested_dir in "${OverrideStickerDirs[@]}"; do
+        build_search_items "$(basename "$requested_dir")" "$requested_dir" "stickerpack"
+    done
+}
+
 select_image() {
     local preview_command=""
     local preview_script=""
@@ -347,6 +431,7 @@ select_image() {
 
     if [ "$use_kitty_graphics" = "true" ]; then
         preview_prefix="printf '\033_Ga=d,d=A;\033\\' >/dev/tty 2>/dev/null || true; printf '\033[2J\033[H'; "
+        # shellcheck disable=SC2016
         kitty_size_preamble='preview_cols="${FZF_PREVIEW_COLUMNS:-60}"; preview_lines="${FZF_PREVIEW_LINES:-60}"; preview_max_lines=$(( preview_lines * 80 / 100 )); if [ "$preview_max_lines" -lt 1 ]; then preview_max_lines=1; fi; '
     else
         preview_prefix="printf '\033[2J\033[H'; "
@@ -445,12 +530,25 @@ while [ $# -gt 0 ]; do
             PreferKittyPreview="true"
             shift
             ;;
+        --sticker)
+            if [ $# -lt 2 ]; then
+                printf 'Missing argument for %s\n' "$option" >&2
+                display_help >&2
+                exit 2
+            fi
+            queue_override_sticker "$2"
+            shift 2
+            ;;
         --create-cache)
             CreateCacheOnly="true"
             shift
             ;;
         --path-only)
             PathOnly="true"
+            shift
+            ;;
+        --no-dragon)
+            NoDragon="true"
             shift
             ;;
         *)
@@ -470,7 +568,9 @@ if [ "$CreateCacheOnly" = "true" ]; then
     exit 0
 fi
 
-if [ -f "$CLIPIMG_CACHE_FILE" ]; then
+if [ "${#OverrideStickerNames[@]}" -gt 0 ] || [ "${#OverrideStickerDirs[@]}" -gt 0 ]; then
+    build_override_choices
+elif [ -f "$CLIPIMG_CACHE_FILE" ]; then
     load_choices_from_cache "$CLIPIMG_CACHE_FILE"
 else
     for i in "${!StickerPackNames[@]}"; do
@@ -489,7 +589,7 @@ fi
 SelectedImage="$(printf '%s' "$SelectedRow" | awk -F $'\t' '{print $1}')"
 
 if [ -f "$SelectedImage" ]; then
-    if [ "$PathOnly" != "true" ] && [ -n "$DRAGON_BIN" ]; then
+    if [ "$PathOnly" != "true" ] && [ "$NoDragon" != "true" ] && [ -n "$DRAGON_BIN" ]; then
         launch_dragon "$SelectedImage"
     fi
 

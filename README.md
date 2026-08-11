@@ -47,6 +47,10 @@ entries at those directories in the env file instead of using separate sections.
 You can pass sticker-pack names on the command line to limit the picker to those
 packs only, for example `clipimg.sh blob` or `clipimg.sh blob blob2`. If you do
 not name any packs, it includes every uncommented sticker pack from the config.
+If you pass `--sticker` one or more times, that replaces the env-defined pack
+set entirely for that run. Each `--sticker` argument can name a configured pack
+or point directly at an arbitrary directory, for example
+`clipimg.sh --sticker blob --sticker /path/to/stickers`.
 
 Sticker selections are shown as `PackName:filename`, such as `Blob2:angry mad`,
 and only supported image files are presented. Terminal previews currently prefer
@@ -65,8 +69,9 @@ environment.
 For output, the script will use any available combination of `dragon`, `xclip`,
 and `copyq`. In normal mode, `copyq` receives both the image payload and the
 file path in slot 1. With `--path-only`, the script skips `dragon` and sends
-only the selected full file path as text to `xclip` and `copyq`. For launcher
-environments with a reduced `PATH`, `clipimg.sh` explicitly checks
+only the selected full file path as text to `xclip` and `copyq`. With
+`--no-dragon`, it still copies the image normally but suppresses the drag target
+window. For launcher environments with a reduced `PATH`, `clipimg.sh` explicitly checks
 `${HOME}/.local/bin/dragon` before falling back to `PATH` lookup.
 
 ## clean_identicons_vcards.sh
